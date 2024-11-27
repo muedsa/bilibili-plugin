@@ -1,0 +1,36 @@
+package com.muedsa.tvbox.bilibili.service
+
+import com.muedsa.tvbox.bilibili.model.bilibili.BiliResp
+import com.muedsa.tvbox.bilibili.model.bilibili.PassportCookieInfo
+import com.muedsa.tvbox.bilibili.model.bilibili.PassportQRCodePoll
+import com.muedsa.tvbox.bilibili.model.bilibili.PassportQRCode
+import com.muedsa.tvbox.bilibili.model.bilibili.PassportRefreshCookie
+import retrofit2.http.GET
+import retrofit2.http.POST
+import retrofit2.http.Query
+
+interface BilibiliPassportService {
+
+    @GET("x/passport-login/web/qrcode/generate")
+    suspend fun qrcodeGenerate(): BiliResp<PassportQRCode>
+
+    @GET("x/passport-login/web/qrcode/poll")
+    suspend fun qrcodePoll(@Query("qrcode_key") qrcodeKey: String): BiliResp<PassportQRCodePoll>
+
+    @GET("x/passport-login/web/cookie/info")
+    suspend fun cookieInfo(@Query("csrf") csrf: String): BiliResp<PassportCookieInfo>
+
+    @POST("x/passport-login/web/cookie/refresh")
+    suspend fun cookieRefresh(
+        @Query("csrf") csrf: String,
+        @Query("refresh_csrf") refreshCsrf: String,
+        @Query("source") source: String = "main_web",
+        @Query("refresh_token") refreshToken: String,
+    ) : BiliResp<PassportRefreshCookie>
+
+    @POST("x/passport-login/web/confirm/refresh")
+    suspend fun confirmRefresh(
+        @Query("csrf") csrf: String,
+        @Query("refresh_token") refreshToken: String
+    ) : BiliResp<Unit>
+}
