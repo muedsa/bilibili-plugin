@@ -133,7 +133,7 @@ class MediaDetailService(
                     add("UP: ${info.owner.name}")
                 }
                 add("分类: ${info.tname}")
-                val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
+                val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
                 val zoneId = TimeZone.getTimeZone("Asia/Shanghai")
                 sdf.timeZone = zoneId
                 val date = Date(info.pubDate * 1000L)

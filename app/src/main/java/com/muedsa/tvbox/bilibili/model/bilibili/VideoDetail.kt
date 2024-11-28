@@ -12,7 +12,7 @@ data class VideoDetail(
     val tname: String,
     val copyright: Int = 1,
     val pic: String = "",
-    val pubDate: Long = 0L,
+    @SerialName("pubdate") val pubDate: Long = 0L,
     val ctime: Long = 0L,
     val desc: String = "",
     @SerialName("desc_v2") val descV2: List<VideoDescV2>? = null,
