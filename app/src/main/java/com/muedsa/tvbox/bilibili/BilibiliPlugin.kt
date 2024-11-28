@@ -74,7 +74,12 @@ class BilibiliPlugin(tvBoxContext: TvBoxContext) : IPlugin(tvBoxContext = tvBoxC
             liveApiService = bilibiliLiveApiService,
         )
     }
-    private val mediaSearchService by lazy { MediaSearchService() }
+    private val mediaSearchService by lazy {
+        MediaSearchService(
+            store = store,
+            apiService = bilibiliApiService,
+        )
+    }
     private val mediaCatalogService by lazy { MediaCatalogService() }
 
     override fun provideMainScreenService(): IMainScreenService = mainScreenService
