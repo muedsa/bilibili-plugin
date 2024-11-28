@@ -62,4 +62,16 @@ object BiliApiHelper {
         return params
     }
 
+    fun buildSearchParams(
+        keyword: String,
+        searchType: String,
+        mixinKey: String,
+    ): MutableMap<String, String> {
+        val params = mutableMapOf<String, String>(
+            "search_type" to searchType,
+            "keyword" to keyword,
+        )
+        WBIHelper.fillWbiParams(params = params, mixinKey = mixinKey)
+        return params
+    }
 }
