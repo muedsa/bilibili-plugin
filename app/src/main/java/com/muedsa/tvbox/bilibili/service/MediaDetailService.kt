@@ -164,7 +164,7 @@ class MediaDetailService(
         )
     }
 
-    private fun getVideoEpisodeList(info: VideoDetail, pageInfo: VideoPage): List<MediaEpisode> {
+    private fun getVideoEpisodeListFromHtml(info: VideoDetail, pageInfo: VideoPage): List<MediaEpisode> {
         val url = "${BilibiliConst.MAIN_SITE_URL}/video/${info.bvid}/?spm_id_from=333.1007.tianma.1-1-1.click"
         val head = url.toRequestBuild()
             .feignChrome(referer = "${BilibiliConst.MAIN_SITE_URL}/")
@@ -203,7 +203,7 @@ class MediaDetailService(
     }
 
     @OptIn(ExperimentalStdlibApi::class)
-    private suspend fun getVideoEpisodeList_bak(info: VideoDetail, pageInfo: VideoPage): List<MediaEpisode> {
+    private suspend fun getVideoEpisodeList(info: VideoDetail, pageInfo: VideoPage): List<MediaEpisode> {
         val b3 = BiliCookieHelper.getCookeValue(cookieSaver = cookieSaver, cookieName = BiliCookieHelper.COOKIE_B_3)
         val session = "$b3${System.currentTimeMillis()}".md5().toHexString()
         val resp = apiService.wbiPlayUrl(

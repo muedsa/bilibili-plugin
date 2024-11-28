@@ -42,7 +42,7 @@ object BiliApiHelper {
     fun buildWbiPlayUrlParams(
         bvid: String,
         cid: Long,
-        qn: Int = 112,
+        qn: Int = 127,
         session: String,
         mixinKey: String,
     ):  MutableMap<String, String> {
@@ -50,13 +50,17 @@ object BiliApiHelper {
             "bvid" to bvid,
             "cid" to "$cid",
             "qn" to "$qn",
-            "fnval" to "${16 xor 128 xor 2048}",
+            "fnval" to "4048",
             "fnver" to "0",
             "fourk" to "1",
+            "gaia_source" to "",
+            "from_client" to "BROWSER",
+            "is_main_page" to "true",
+            "need_fragment" to "false",
+            "isGaiaAvoided" to "false",
+            "voice_balance" to "1",
+            "web_location" to "1315873",
             "session" to session,
-            "otype" to "json",
-            "type" to "",
-            "platform" to "web",
         )
         WBIHelper.fillWbiParams(params = params, mixinKey = mixinKey)
         return params
