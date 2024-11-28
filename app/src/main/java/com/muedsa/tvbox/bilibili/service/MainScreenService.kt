@@ -14,6 +14,7 @@ import com.muedsa.tvbox.bilibili.helper.BiliCookieHelper
 import com.muedsa.tvbox.bilibili.model.BiliVideoDetailUrlAttrs
 import com.muedsa.tvbox.bilibili.model.LoginState
 import com.muedsa.tvbox.bilibili.model.bilibili.DynamicCard
+import com.muedsa.tvbox.bilibili.model.bilibili.History
 import com.muedsa.tvbox.bilibili.model.bilibili.TopFeed
 import com.muedsa.tvbox.tool.SharedCookieSaver
 import com.muedsa.tvbox.tool.checkSuccess
@@ -40,6 +41,10 @@ class MainScreenService(
         appendRecommendRow(rows = rows)
         // 动态
         appendDynamicRow(rows = rows)
+        // 历史记录-视频
+        appendVideoHistory(rows = rows)
+        // 历史记录-直播
+        appendLiveHistory(rows = rows)
         // 登录信息
         appendLoginInfoRow(rows = rows)
         return rows
@@ -49,11 +54,12 @@ class MainScreenService(
         val uniqId = BiliApiHelper.generateFixedLengthRandomNumber(12)
         val list = mutableListOf<TopFeed>()
         loopLoadRecommend(uniqId = uniqId, index = 1, max = 3, list = list)
-        if (list.isNotEmpty()) {
+        val avLiveList = list.filter { it.goto == "av" || it.goto == "live" }
+        if (avLiveList.isNotEmpty()) {
             rows.add(
                 MediaCardRow(
                     title = "推荐视频",
-                    list = list.filter { it.goto == "av" || it.goto == "live" }.mapNotNull {
+                    list = avLiveList.mapNotNull {
                         if (it.goto == "av") {
                             MediaCard(
                                 id = it.bvid,
@@ -107,21 +113,22 @@ class MainScreenService(
     private suspend fun appendDynamicRow(rows: MutableList<MediaCardRow>) {
         val list = mutableListOf<DynamicCard>()
         loopLoadDynamic(page = 1, maxPage = 5, offset = null, list = list)
-        if (list.isNotEmpty()) {
+        val archiveList =
+            list.filter { it.modules.moduleDynamic.major.type == "MAJOR_TYPE_ARCHIVE" }
+        if (archiveList.isNotEmpty()) {
             rows.add(
                 MediaCardRow(
                     title = "视频动态",
-                    list = list.filter { it.modules.moduleDynamic.major.type == "MAJOR_TYPE_ARCHIVE" }
-                        .map {
-                            val archive = it.modules.moduleDynamic.major.archive
-                            MediaCard(
-                                id = archive.bvid,
-                                detailUrl = BiliVideoDetailUrlAttrs(bvid = archive.bvid).toJsonString(),
-                                title = archive.title,
-                                subTitle = it.modules.moduleAuthor.name,
-                                coverImageUrl = archive.cover
-                            )
-                        },
+                    list = archiveList.map {
+                        val archive = it.modules.moduleDynamic.major.archive
+                        MediaCard(
+                            id = archive.bvid,
+                            detailUrl = BiliVideoDetailUrlAttrs(bvid = archive.bvid).toJsonString(),
+                            title = archive.title,
+                            subTitle = it.modules.moduleAuthor.name,
+                            coverImageUrl = archive.cover
+                        )
+                    },
                     cardWidth = BilibiliConst.AV_CARD_WIDTH,
                     cardHeight = BilibiliConst.AV_CARD_HEIGHT,
                 )
@@ -152,6 +159,85 @@ class MainScreenService(
                 offset = resp.data.offset,
                 list = list,
             )
+        }
+    }
+
+    private suspend fun appendVideoHistory(rows: MutableList<MediaCardRow>) {
+        val list = mutableListOf<History>()
+        loopLoadHistory(num = 0, maxNum = 3, business = "archive", list = list)
+        val archiveList = list.filter { it.history.business == "archive" }
+        if (archiveList.isNotEmpty()) {
+            rows.add(
+                MediaCardRow(
+                    title = "历史记录-视频",
+                    list = archiveList.map {
+                        MediaCard(
+                            id = it.history.bvid,
+                            detailUrl = BiliVideoDetailUrlAttrs(
+                                bvid = it.history.bvid,
+                                page = it.history.page
+                            ).toJsonString(),
+                            title = it.title,
+                            subTitle = it.authorName,
+                            coverImageUrl = it.cover,
+                        )
+                    },
+                    cardWidth = BilibiliConst.AV_CARD_WIDTH,
+                    cardHeight = BilibiliConst.AV_CARD_HEIGHT,
+                )
+            )
+        }
+    }
+
+    private suspend fun appendLiveHistory(rows: MutableList<MediaCardRow>) {
+        val list = mutableListOf<History>()
+        loopLoadHistory(num = 0, maxNum = 3, business = "live", list = list)
+        val liveList = list.filter { it.history.business == "live" }
+        if (liveList.isNotEmpty()) {
+            rows.add(
+                MediaCardRow(
+                    title = "历史记录-直播",
+                    list = liveList.map {
+                        MediaCard(
+                            id = "${MediaDetailService.MEDIA_ID_LIVE_ROOM_PREFIX}${it.history.oid}",
+                            detailUrl = "${MediaDetailService.MEDIA_ID_LIVE_ROOM_PREFIX}${it.history.oid}",
+                            title = it.title,
+                            subTitle = "直播 ${it.authorName}",
+                            coverImageUrl = it.cover,
+                        )
+                    },
+                    cardWidth = BilibiliConst.AV_CARD_WIDTH,
+                    cardHeight = BilibiliConst.AV_CARD_HEIGHT,
+                )
+            )
+        }
+    }
+
+    private suspend fun loopLoadHistory(
+        num: Int = 0,
+        maxNum: Int = 5,
+        max: Long? = null,
+        viewAt: Long? = null,
+        business: String = "archive", // archive live
+        ps: Int = 30,
+        list: MutableList<History>
+    ) {
+        if (num > maxNum) return
+        val resp =
+            apiService.historyCursor(max = max, business = business, viewAt = viewAt, ps = ps)
+        if (resp.code == 0L && resp.data?.list?.isNotEmpty() == true) {
+            val historyCursorFlow = resp.data
+            list.addAll(resp.data.list)
+            loopLoadHistory(
+                num = num + 1,
+                maxNum = maxNum,
+                max = historyCursorFlow.cursor.max,
+                viewAt = historyCursorFlow.cursor.viewAt,
+                ps = ps,
+                list = list,
+            )
+        } else {
+            return
         }
     }
 

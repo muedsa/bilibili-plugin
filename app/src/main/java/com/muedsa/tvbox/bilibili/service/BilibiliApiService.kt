@@ -5,6 +5,7 @@ import com.muedsa.tvbox.bilibili.model.bilibili.BiliResp
 import com.muedsa.tvbox.bilibili.model.bilibili.DataFlow
 import com.muedsa.tvbox.bilibili.model.bilibili.DynamicCard
 import com.muedsa.tvbox.bilibili.model.bilibili.FingerSpi
+import com.muedsa.tvbox.bilibili.model.bilibili.HistoryCursorFlow
 import com.muedsa.tvbox.bilibili.model.bilibili.Nav
 import com.muedsa.tvbox.bilibili.model.bilibili.PlayUrl
 import com.muedsa.tvbox.bilibili.model.bilibili.Rcmd
@@ -61,4 +62,12 @@ interface BilibiliApiService {
         @Header("Referer") referer: String
     ) : BiliResp<PlayUrl>
 
+    @GET("x/web-interface/history/cursor")
+    suspend fun historyCursor(
+        @Query("max") max: Long? = null,
+        @Query("business") business: String? = null,
+        @Query("view_at") viewAt: Long? = 0,
+        @Query("type") type: String? = null,
+        @Query("ps") ps: Int? = 30,
+    ) : BiliResp<HistoryCursorFlow>
 }
