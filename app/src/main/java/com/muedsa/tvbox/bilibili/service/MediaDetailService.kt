@@ -129,17 +129,16 @@ class MediaDetailService(
             title = info.title,
             subTitle = pageInfo.part,
             description = buildList<String> {
-                if (info.owner != null) {
-                    add("UP: ${info.owner.name}")
-                }
-                add("分类: ${info.tname}")
+                add(info.tname)
                 val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
                 val zoneId = TimeZone.getTimeZone("Asia/Shanghai")
                 sdf.timeZone = zoneId
                 val date = Date(info.pubDate * 1000L)
-                add("发布时间: ${sdf.format(date)}")
-                add("简介: ${info.desc}")
-            }.joinToString("\n"),
+                add(sdf.format(date))
+                if (info.owner != null) {
+                    add(info.owner.name)
+                }
+            }.joinToString(" | ") + "\n\n${info.desc}",
             detailUrl = newDetailUrl,
             backgroundImageUrl = info.pic,
             playSourceList = listOf(
