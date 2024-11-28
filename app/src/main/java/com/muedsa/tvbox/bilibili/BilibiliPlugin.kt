@@ -9,6 +9,7 @@ import com.muedsa.tvbox.api.service.IMediaDetailService
 import com.muedsa.tvbox.api.service.IMediaSearchService
 import com.muedsa.tvbox.api.store.IPluginPerfStore
 import com.muedsa.tvbox.bilibili.service.BilibiliApiService
+import com.muedsa.tvbox.bilibili.service.BilibiliLiveApiService
 import com.muedsa.tvbox.bilibili.service.BilibiliPassportService
 import com.muedsa.tvbox.bilibili.service.MainScreenService
 import com.muedsa.tvbox.bilibili.service.MediaCatalogService
@@ -47,6 +48,13 @@ class BilibiliPlugin(tvBoxContext: TvBoxContext) : IPlugin(tvBoxContext = tvBoxC
             okHttpClient = okHttpClient
         )
     }
+    private val bilibiliLiveApiService by lazy {
+        createJsonRetrofit(
+            baseUrl = "${BilibiliConst.LIVE_API_URL}/",
+            service = BilibiliLiveApiService::class.java,
+            okHttpClient = okHttpClient
+        )
+    }
     private val mainScreenService by lazy {
         MainScreenService(
             store = store,
@@ -63,6 +71,7 @@ class BilibiliPlugin(tvBoxContext: TvBoxContext) : IPlugin(tvBoxContext = tvBoxC
             okHttpClient = okHttpClient,
             passportService = bilibiliPassportService,
             apiService = bilibiliApiService,
+            liveApiService = bilibiliLiveApiService,
         )
     }
     private val mediaSearchService by lazy { MediaSearchService() }

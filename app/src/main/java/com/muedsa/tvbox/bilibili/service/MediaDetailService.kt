@@ -16,7 +16,9 @@ import com.muedsa.tvbox.bilibili.helper.BiliApiHelper
 import com.muedsa.tvbox.bilibili.helper.BiliCookieHelper
 import com.muedsa.tvbox.bilibili.model.BiliVideoDetailUrlAttrs
 import com.muedsa.tvbox.bilibili.model.bilibili.BiliResp
+import com.muedsa.tvbox.bilibili.model.bilibili.LiveUserRoomInfo
 import com.muedsa.tvbox.bilibili.model.bilibili.PlayUrl
+import com.muedsa.tvbox.bilibili.model.bilibili.RoomInfo
 import com.muedsa.tvbox.bilibili.model.bilibili.VideoDetail
 import com.muedsa.tvbox.bilibili.model.bilibili.VideoPage
 import com.muedsa.tvbox.tool.ChromeUserAgent
@@ -39,7 +41,8 @@ class MediaDetailService(
     private val cookieSaver: SharedCookieSaver,
     private val okHttpClient: OkHttpClient,
     passportService: BilibiliPassportService,
-    private val apiService: BilibiliApiService
+    private val apiService: BilibiliApiService,
+    private val liveApiService: BilibiliLiveApiService,
 ) : IMediaDetailService {
 
     private val actionDelegate = ActionDelegate(
@@ -60,7 +63,7 @@ class MediaDetailService(
                 } else 1
             videoDetail(bvid = mediaId, page = page)
         } else if (mediaId.startsWith(MEDIA_ID_LIVE_ROOM_PREFIX)) {
-            TODO("暂不支持直播")
+            liveRoomDetail(roomId = mediaId.removePrefix(MEDIA_ID_LIVE_ROOM_PREFIX).toLong())
         } else {
             TODO("暂不支持 $mediaId")
         }
@@ -145,7 +148,7 @@ class MediaDetailService(
                 MediaPlaySource(
                     id = "bilibili",
                     name = "哔哩哔哩",
-                    episodeList = getEpisodeList(info = info, pageInfo = pageInfo)
+                    episodeList = getVideoEpisodeList(info = info, pageInfo = pageInfo)
                 )
             ),
             favoritedMediaCard = SavedMediaCard(
@@ -160,7 +163,7 @@ class MediaDetailService(
         )
     }
 
-    private fun getEpisodeList(info: VideoDetail, pageInfo: VideoPage): List<MediaEpisode> {
+    private fun getVideoEpisodeList(info: VideoDetail, pageInfo: VideoPage): List<MediaEpisode> {
         val url = "${BilibiliConst.MAIN_SITE_URL}/video/${info.bvid}/?spm_id_from=333.1007.tianma.1-1-1.click"
         val head = url.toRequestBuild()
             .feignChrome(referer = "${BilibiliConst.MAIN_SITE_URL}/")
@@ -236,10 +239,114 @@ class MediaDetailService(
         }
     }
 
+    private suspend fun liveRoomDetail(roomId: Long? = null, uid: Long? = null): MediaDetail {
+        var roomInfo: RoomInfo
+        var liveUserRoomInfo: LiveUserRoomInfo
+        if (roomId != null) {
+            val roomInfoResp = liveApiService.getRoomInfo(roomId = roomId)
+            if (roomInfoResp.code != 0L || roomInfoResp.data == null) {
+                throw RuntimeException("获取直播间信息失败 ${roomInfoResp.message}")
+            }
+            roomInfo = roomInfoResp.data
+            val liveUserInfoResp = liveApiService.getLiveUserInfo(uid = roomId)
+            if (liveUserInfoResp.code != 0L || liveUserInfoResp.data == null) {
+                throw RuntimeException("获取直播间信息失败 ${liveUserInfoResp.message}")
+            }
+            liveUserRoomInfo = liveUserInfoResp.data
+        } else if (uid != null) {
+            val liveUserInfoResp = liveApiService.getLiveUserInfo(uid = uid)
+            if (liveUserInfoResp.code != 0L || liveUserInfoResp.data == null) {
+                throw RuntimeException("获取直播间信息失败 ${liveUserInfoResp.message}")
+            }
+            liveUserRoomInfo = liveUserInfoResp.data
+            val roomInfoResp = liveApiService.getRoomInfo(roomId = liveUserRoomInfo.roomId)
+            if (roomInfoResp.code != 0L || roomInfoResp.data == null) {
+                throw RuntimeException("获取直播间信息失败 ${roomInfoResp.message}")
+            }
+            roomInfo = roomInfoResp.data
+        } else {
+            throw RuntimeException("roomId或uid至少有一个不能为空")
+        }
+        val savedId = "$MEDIA_ID_LIVE_ROOM_PREFIX$roomId"
+        return MediaDetail(
+            id = savedId,
+            title = liveUserRoomInfo.info.uname,
+            subTitle = roomInfo.title,
+            description = buildList<String> {
+                add("\uD83D\uDD25 ${roomInfo.online}")
+                add("❤ ${roomInfo.attention}")
+                add("${roomInfo.parentAreaName}/${roomInfo.areaName}")
+                if (roomInfo.liveTime.isNotBlank()) {
+                    add(roomInfo.liveTime)
+                }
+            }.joinToString(" | ") + "\n\n${roomInfo.description}",
+            detailUrl = savedId,
+            backgroundImageUrl = roomInfo.keyframe,
+            playSourceList = createLiveRoomPlaySource(roomInfo = roomInfo),
+            favoritedMediaCard = SavedMediaCard(
+                id = savedId,
+                title = liveUserRoomInfo.info.uname,
+                detailUrl = savedId,
+                coverImageUrl = if (roomInfo.userCover.isNotBlank()) roomInfo.userCover else roomInfo.keyframe,
+                cardWidth = BilibiliConst.AV_CARD_WIDTH,
+                cardHeight = BilibiliConst.AV_CARD_HEIGHT,
+            ),
+            rows = emptyList()
+        )
+    }
+
+    private suspend fun createLiveRoomPlaySource(roomInfo: RoomInfo): List<MediaPlaySource> {
+        return if (roomInfo.liveStatus == 1) {
+            val resp = liveApiService.getPlayUrl(
+                cid = roomInfo.roomId,
+                platform = "android",
+                quality = 4,
+            )
+            if (resp.code == 0L && resp.data != null) {
+                listOf(
+                    MediaPlaySource(
+                        id = "bilibili_live",
+                        name = "哔哩哔哩直播",
+                        episodeList = resp.data.durl.mapIndexed { index, durl ->
+                            MediaEpisode(
+                                id = "$MEDIA_ID_LIVE_ROOM_PREFIX${roomInfo.roomId}/${index}",
+                                name = "线路${index + 1}",
+                                flag5 = durl.url
+                            )
+                        }
+                    )
+                )
+            } else {
+                listOf(
+                    MediaPlaySource(
+                        id = "bilibili_live",
+                        name = "哔哩哔哩直播",
+                        episodeList = resp.data!!.durl.mapIndexed { index, durl ->
+                            MediaEpisode(
+                                id = "$MEDIA_ID_LIVE_ROOM_PREFIX${roomInfo.roomId}",
+                                name = if (resp.message.isNotBlank()) resp.message else "获取直播地址失败",
+                            )
+                        }
+                    )
+                )
+            }
+        } else emptyList()
+    }
+
     override suspend fun getEpisodePlayInfo(
         playSource: MediaPlaySource,
         episode: MediaEpisode
     ): MediaHttpSource {
+        return if (episode.id.startsWith(MEDIA_ID_BV_PREFIX)) {
+            return getVideoEpisodePlayInfo(episode = episode)
+        } else if (episode.id.startsWith(MEDIA_ID_LIVE_ROOM_PREFIX)) {
+            return getLiveEpisodePlayInfo(episode = episode)
+        } else {
+            TODO("暂不支持的类型 ${episode.id}")
+        }
+    }
+
+    private fun getVideoEpisodePlayInfo(episode: MediaEpisode): MediaHttpSource {
         val bvid =  episode.flag5?: throw RuntimeException("flag5 is empty")
         val videoUrl = episode.flag6?: throw RuntimeException("flag6 is empty")
         val audioUrl = episode.flag7
@@ -252,6 +359,12 @@ class MediaDetailService(
         } else {
             MediaMergingHttpSource(urls = listOf(videoUrl, audioUrl), httpHeaders = headers)
         }
+    }
+
+    private fun getLiveEpisodePlayInfo(episode: MediaEpisode): MediaHttpSource {
+        // val roomId = episode.id.removePrefix(MEDIA_ID_LIVE_ROOM_PREFIX)
+        val url = episode.flag5 ?: throw RuntimeException("获取直播地址失败")
+        return MediaHttpSource(url = url)
     }
 
     companion object {
