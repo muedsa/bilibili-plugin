@@ -309,8 +309,8 @@ class MainScreenService(
             )
             if (genWebTicketResp.code == 0L && genWebTicketResp.data != null) {
                 val ticket = genWebTicketResp.data.ticket
-                val exportsAt = (genWebTicketResp.data.createdAt + genWebTicketResp.ttl) * 1000L
-                if (ticket.isNotBlank() && exportsAt > 0L)
+                val exportsAt = (genWebTicketResp.data.createdAt + genWebTicketResp.data.ttl) * 1000L
+                if (ticket.isNotBlank() && exportsAt > 0L) {
                     cookieSaver.save(
                         BiliCookieHelper.createCookie(
                             name = BiliCookieHelper.COOKIE_B_TICKET,
@@ -318,6 +318,8 @@ class MainScreenService(
                             expiresAt = exportsAt
                         )
                     )
+                }
+
             }
         }
     }
