@@ -42,7 +42,7 @@ object BiliApiHelper {
     fun buildWbiPlayUrlParams(
         bvid: String,
         cid: Long,
-        qn: Int = 80,
+        qn: Int = 112,
         session: String,
         mixinKey: String,
     ):  MutableMap<String, String> {
@@ -50,7 +50,7 @@ object BiliApiHelper {
             "bvid" to bvid,
             "cid" to "$cid",
             "qn" to "$qn",
-            "fnval" to "1",
+            "fnval" to "${16 xor 128 xor 2048}",
             "fnver" to "0",
             "fourk" to "1",
             "session" to session,

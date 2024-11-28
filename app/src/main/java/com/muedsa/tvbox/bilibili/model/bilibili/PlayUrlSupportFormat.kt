@@ -9,5 +9,5 @@ data class PlayUrlSupportFormat(
     val format: String = "",
     @SerialName("new_description") val newDescription: String = "",
     val superscript: String = "",
-    val codecs: List<String> = emptyList()
+    val codecs: List<String>? = null
 )

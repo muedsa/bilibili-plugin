@@ -31,6 +31,7 @@ import com.muedsa.tvbox.tool.parseHtml
 import com.muedsa.tvbox.tool.toRequestBuild
 import kotlinx.serialization.encodeToString
 import okhttp3.OkHttpClient
+import timber.log.Timber
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -171,6 +172,7 @@ class MediaDetailService(
             .parseHtml()
             .head()
         val playUrlJson = PLAY_URL_REGEX.find(head.html())?.groups[1]?.value
+        Timber.d("playUrl=$playUrlJson")
         if (playUrlJson.isNullOrEmpty()) {
             return V_VOUCHER_MEDIA_EPISODE_LIST
         }
@@ -201,7 +203,7 @@ class MediaDetailService(
     }
 
     @OptIn(ExperimentalStdlibApi::class)
-    private suspend fun getEpisodeList_bak(info: VideoDetail, pageInfo: VideoPage): List<MediaEpisode> {
+    private suspend fun getVideoEpisodeList_bak(info: VideoDetail, pageInfo: VideoPage): List<MediaEpisode> {
         val b3 = BiliCookieHelper.getCookeValue(cookieSaver = cookieSaver, cookieName = BiliCookieHelper.COOKIE_B_3)
         val session = "$b3${System.currentTimeMillis()}".md5().toHexString()
         val resp = apiService.wbiPlayUrl(

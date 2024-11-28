@@ -12,7 +12,7 @@ object BiliCookieHelper {
     const val COOKIE_B_TICKET = "bili_ticket"
 
     fun existCookie(cookieSaver: SharedCookieSaver, cookieName: String): Boolean =
-        cookieSaver.load().none { it.name == cookieName }
+        cookieSaver.load().any { it.name == cookieName }
 
     fun getCookeValue(
         cookieSaver: SharedCookieSaver,
@@ -23,7 +23,7 @@ object BiliCookieHelper {
     fun createCookie(
         name: String,
         value: String,
-        expiresAt: Long = System.currentTimeMillis() + 365 * 24 * 60 * 60 * 100,
+        expiresAt: Long = System.currentTimeMillis() + 400L * 24L * 60L * 60L * 1000L,
         domain: String = "bilibili.com",
         path: String = "/",
         secure: Boolean = false,

@@ -242,7 +242,7 @@ class MainScreenService(
             .checkSuccess()
 
         // buvid4
-        if (BiliCookieHelper.existCookie(
+        if (!BiliCookieHelper.existCookie(
                 cookieSaver = cookieSaver,
                 cookieName = BiliCookieHelper.COOKIE_B_4
             )
@@ -295,7 +295,7 @@ class MainScreenService(
 //        }
 
         // bili_ticket
-        if (BiliCookieHelper.existCookie(
+        if (!BiliCookieHelper.existCookie(
                 cookieSaver = cookieSaver,
                 cookieName = BiliCookieHelper.COOKIE_B_TICKET
             )
