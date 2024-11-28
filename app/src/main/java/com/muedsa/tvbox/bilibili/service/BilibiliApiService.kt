@@ -28,7 +28,7 @@ interface BilibiliApiService {
         @Query("key_id") keyId: String = "ec02",
         @Query("context[ts]") ts: Long = System.currentTimeMillis() / 1000,
         @Query("hexsign") hexSign: String = hmacSha256("XgwSnGZ1p", "ts${ts}"),
-        @Query("csrf") csrf: String = "",
+        @Query("csrf") csrf: String? = null,
     ): BiliResp<WebTicket>
 
     @GET("x/frontend/finger/spi")

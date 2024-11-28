@@ -5,10 +5,19 @@ import com.muedsa.tvbox.tool.SharedCookieSaver
 
 object BiliCookieHelper {
 
+    const val COOKIE_B_3 = "buvid3"
+    const val COOKIE_B_4 = "buvid4"
+    const val COOKIE_B_NUT = "b_nut"
+    const val COOKIE_B_JCT = "bili_jct"
+    const val COOKIE_B_TICKET = "bili_ticket"
+
+    fun existCookie(cookieSaver: SharedCookieSaver, cookieName: String): Boolean =
+        cookieSaver.load().none { it.name == cookieName }
+
     fun getCookeValue(
         cookieSaver: SharedCookieSaver,
         cookieName: String,
-        defaultValue: String = "",
+        defaultValue: String? = "",
     ) = cookieSaver.load().find { cookie -> cookie.name == cookieName }?.value ?: defaultValue
 
     fun createCookie(

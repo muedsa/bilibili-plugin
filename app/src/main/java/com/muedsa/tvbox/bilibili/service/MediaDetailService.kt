@@ -200,7 +200,7 @@ class MediaDetailService(
 
     @OptIn(ExperimentalStdlibApi::class)
     private suspend fun getEpisodeList_bak(info: VideoDetail, pageInfo: VideoPage): List<MediaEpisode> {
-        val b3 = BiliCookieHelper.getCookeValue(cookieSaver = cookieSaver, cookieName = "buvid3")
+        val b3 = BiliCookieHelper.getCookeValue(cookieSaver = cookieSaver, cookieName = BiliCookieHelper.COOKIE_B_3)
         val session = "$b3${System.currentTimeMillis()}".md5().toHexString()
         val resp = apiService.wbiPlayUrl(
             BiliApiHelper.buildWbiPlayUrlParams(

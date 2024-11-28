@@ -249,13 +249,17 @@ class MainScreenService(
             .checkSuccess()
 
         // buvid4
-        if (cookieSaver.load().none { it.name == "buvid4"}) {
+        if (BiliCookieHelper.existCookie(
+                cookieSaver = cookieSaver,
+                cookieName = BiliCookieHelper.COOKIE_B_4
+            )
+        ) {
             val fingerSpiResp = apiService.fingerSpi()
             if (fingerSpiResp.code == 0L && fingerSpiResp.data != null) {
                 if (fingerSpiResp.data.b3.isNotBlank()) {
                     cookieSaver.save(
                         BiliCookieHelper.createCookie(
-                            name = "buvid3",
+                            name = BiliCookieHelper.COOKIE_B_3,
                             value = fingerSpiResp.data.b3
                         )
                     )
@@ -263,7 +267,7 @@ class MainScreenService(
                 if (fingerSpiResp.data.b4.isNotBlank()) {
                     cookieSaver.save(
                         BiliCookieHelper.createCookie(
-                            name = "buvid4",
+                            name = BiliCookieHelper.COOKIE_B_4,
                             value = fingerSpiResp.data.b4
                         )
                     )
@@ -296,6 +300,33 @@ class MainScreenService(
 //            BiliCookieHelper.getCookeValue(cookieSaver, "")
 //            passportService.cookieInfo()
 //        }
+
+        // bili_ticket
+        if (BiliCookieHelper.existCookie(
+                cookieSaver = cookieSaver,
+                cookieName = BiliCookieHelper.COOKIE_B_TICKET
+            )
+        ) {
+            val genWebTicketResp = apiService.genWebTicket(
+                csrf = BiliCookieHelper.getCookeValue(
+                    cookieSaver = cookieSaver,
+                    cookieName = BiliCookieHelper.COOKIE_B_JCT,
+                    defaultValue = null
+                )
+            )
+            if (genWebTicketResp.code == 0L && genWebTicketResp.data != null) {
+                val ticket = genWebTicketResp.data.ticket
+                val exportsAt = (genWebTicketResp.data.createdAt + genWebTicketResp.ttl) * 1000L
+                if (ticket.isNotBlank() && exportsAt > 0L)
+                    cookieSaver.save(
+                        BiliCookieHelper.createCookie(
+                            name = BiliCookieHelper.COOKIE_B_TICKET,
+                            value = ticket,
+                            expiresAt = exportsAt
+                        )
+                    )
+            }
+        }
     }
 
     private fun appendLoginInfoRow(rows: MutableList<MediaCardRow>) {
