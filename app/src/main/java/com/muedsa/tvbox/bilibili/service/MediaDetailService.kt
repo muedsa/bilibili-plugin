@@ -190,7 +190,7 @@ class MediaDetailService(
             val qualityName =
                 resp.data.supportFormat.find { it.quality == videoTrack.id }?.newDescription ?: "??"
             MediaEpisode(
-                id = "${pageInfo.cid}_${videoTrack.id}_${videoTrack.codecs}",
+                id = "${pageInfo.cid}",
                 name = "$qualityName(${videoTrack.codecs})",
                 flag3 = pageInfo.cid,
                 flag5 = info.bvid,
@@ -229,7 +229,7 @@ class MediaDetailService(
             val qualityName =
                 resp.data.supportFormat.find { it.quality == videoTrack.id }?.newDescription ?: "??"
             MediaEpisode(
-                id = "${pageInfo.cid}",
+                id = "${info.bvid}_${pageInfo.cid}",
                 name = "$qualityName(${videoTrack.codecs})",
                 flag3 = pageInfo.cid,
                 flag5 = info.bvid,
@@ -309,9 +309,10 @@ class MediaDetailService(
                         name = "哔哩哔哩直播",
                         episodeList = resp.data.durl.mapIndexed { index, durl ->
                             MediaEpisode(
-                                id = "$MEDIA_ID_LIVE_ROOM_PREFIX${roomInfo.roomId}/${index}",
+                                id = "$MEDIA_ID_LIVE_ROOM_PREFIX${roomInfo.roomId}",
                                 name = "线路${index + 1}",
-                                flag5 = durl.url
+                                flag3 = roomInfo.roomId,
+                                flag5 = durl.url,
                             )
                         }
                     )
