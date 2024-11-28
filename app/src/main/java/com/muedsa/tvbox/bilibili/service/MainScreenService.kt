@@ -21,6 +21,10 @@ import com.muedsa.tvbox.tool.checkSuccess
 import com.muedsa.tvbox.tool.feignChrome
 import com.muedsa.tvbox.tool.get
 import com.muedsa.tvbox.tool.toRequestBuild
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import okhttp3.OkHttpClient
 
 class MainScreenService(
@@ -36,53 +40,48 @@ class MainScreenService(
 
     override suspend fun getRowsData(): List<MediaCardRow> {
         checkLogin()
-        val rows = mutableListOf<MediaCardRow>()
-        // 推荐
-        appendRecommendRow(rows = rows)
-        // 动态
-        appendDynamicRow(rows = rows)
-        // 历史记录-视频
-        appendVideoHistory(rows = rows)
-        // 历史记录-直播
-        appendLiveHistory(rows = rows)
-        // 登录信息
-        appendLoginInfoRow(rows = rows)
-        return rows
+        return coroutineScope {
+            listOf(
+                async(Dispatchers.IO) { getRecommendRow() },        // 推荐
+                async(Dispatchers.IO) { getDynamicRow() },          // 动态
+                async(Dispatchers.IO) { getVideoHistoryRow() },     // 历史记录-视频
+                async(Dispatchers.IO) { getLiveHistoryRow() },      // 历史记录-直播
+                async(Dispatchers.IO) { getLoginInfoRow() },        // 个人信息
+            ).awaitAll().filterNotNull()
+        }
     }
 
-    private suspend fun appendRecommendRow(rows: MutableList<MediaCardRow>) {
+    private suspend fun getRecommendRow(): MediaCardRow? {
         val uniqId = BiliApiHelper.generateFixedLengthRandomNumber(12)
         val list = mutableListOf<TopFeed>()
         loopLoadRecommend(uniqId = uniqId, index = 1, max = 3, list = list)
         val avLiveList = list.filter { it.goto == "av" || it.goto == "live" }
-        if (avLiveList.isNotEmpty()) {
-            rows.add(
-                MediaCardRow(
-                    title = "推荐视频",
-                    list = avLiveList.mapNotNull {
-                        if (it.goto == "av") {
-                            MediaCard(
-                                id = it.bvid,
-                                detailUrl = BiliVideoDetailUrlAttrs(bvid = it.bvid).toJsonString(),
-                                title = it.title,
-                                subTitle = it.owner?.name ?: "",
-                                coverImageUrl = it.pic
-                            )
-                        } else if (it.goto == "live") {
-                            MediaCard(
-                                id = "${MediaDetailService.MEDIA_ID_LIVE_ROOM_PREFIX}${it.id}",
-                                detailUrl = BiliVideoDetailUrlAttrs(bvid = it.bvid).toJsonString(),
-                                title = it.title,
-                                subTitle = "直播 ${it.owner?.name ?: ""}",
-                                coverImageUrl = it.pic
-                            )
-                        } else null
-                    },
-                    cardWidth = BilibiliConst.AV_CARD_WIDTH,
-                    cardHeight = BilibiliConst.AV_CARD_HEIGHT,
-                )
+        return if (avLiveList.isNotEmpty()) {
+            MediaCardRow(
+                title = "推荐视频",
+                list = avLiveList.mapNotNull {
+                    if (it.goto == "av") {
+                        MediaCard(
+                            id = it.bvid,
+                            detailUrl = BiliVideoDetailUrlAttrs(bvid = it.bvid).toJsonString(),
+                            title = it.title,
+                            subTitle = it.owner?.name ?: "",
+                            coverImageUrl = it.pic
+                        )
+                    } else if (it.goto == "live") {
+                        MediaCard(
+                            id = "${MediaDetailService.MEDIA_ID_LIVE_ROOM_PREFIX}${it.id}",
+                            detailUrl = BiliVideoDetailUrlAttrs(bvid = it.bvid).toJsonString(),
+                            title = it.title,
+                            subTitle = "直播 ${it.owner?.name ?: ""}",
+                            coverImageUrl = it.pic
+                        )
+                    } else null
+                },
+                cardWidth = BilibiliConst.AV_CARD_WIDTH,
+                cardHeight = BilibiliConst.AV_CARD_HEIGHT,
             )
-        }
+        } else null
     }
 
     private suspend fun loopLoadRecommend(
@@ -110,30 +109,28 @@ class MainScreenService(
         loopLoadRecommend(uniqId = uniqId, index = index + 1, max = max, list = list)
     }
 
-    private suspend fun appendDynamicRow(rows: MutableList<MediaCardRow>) {
+    private suspend fun getDynamicRow(): MediaCardRow? {
         val list = mutableListOf<DynamicCard>()
         loopLoadDynamic(page = 1, maxPage = 5, offset = null, list = list)
         val archiveList =
             list.filter { it.modules.moduleDynamic.major.type == "MAJOR_TYPE_ARCHIVE" }
-        if (archiveList.isNotEmpty()) {
-            rows.add(
-                MediaCardRow(
-                    title = "视频动态",
-                    list = archiveList.map {
-                        val archive = it.modules.moduleDynamic.major.archive
-                        MediaCard(
-                            id = archive.bvid,
-                            detailUrl = BiliVideoDetailUrlAttrs(bvid = archive.bvid).toJsonString(),
-                            title = archive.title,
-                            subTitle = it.modules.moduleAuthor.name,
-                            coverImageUrl = archive.cover
-                        )
-                    },
-                    cardWidth = BilibiliConst.AV_CARD_WIDTH,
-                    cardHeight = BilibiliConst.AV_CARD_HEIGHT,
-                )
+        return if (archiveList.isNotEmpty()) {
+            MediaCardRow(
+                title = "视频动态",
+                list = archiveList.map {
+                    val archive = it.modules.moduleDynamic.major.archive
+                    MediaCard(
+                        id = archive.bvid,
+                        detailUrl = BiliVideoDetailUrlAttrs(bvid = archive.bvid).toJsonString(),
+                        title = archive.title,
+                        subTitle = it.modules.moduleAuthor.name,
+                        coverImageUrl = archive.cover
+                    )
+                },
+                cardWidth = BilibiliConst.AV_CARD_WIDTH,
+                cardHeight = BilibiliConst.AV_CARD_HEIGHT,
             )
-        }
+        } else null
     }
 
     private suspend fun loopLoadDynamic(
@@ -162,55 +159,51 @@ class MainScreenService(
         }
     }
 
-    private suspend fun appendVideoHistory(rows: MutableList<MediaCardRow>) {
+    private suspend fun getVideoHistoryRow(): MediaCardRow? {
         val list = mutableListOf<History>()
         loopLoadHistory(num = 0, maxNum = 3, business = "archive", list = list)
         val archiveList = list.filter { it.history.business == "archive" }
-        if (archiveList.isNotEmpty()) {
-            rows.add(
-                MediaCardRow(
-                    title = "历史记录-视频",
-                    list = archiveList.map {
-                        MediaCard(
-                            id = it.history.bvid,
-                            detailUrl = BiliVideoDetailUrlAttrs(
-                                bvid = it.history.bvid,
-                                page = it.history.page
-                            ).toJsonString(),
-                            title = it.title,
-                            subTitle = it.authorName,
-                            coverImageUrl = it.cover,
-                        )
-                    },
-                    cardWidth = BilibiliConst.AV_CARD_WIDTH,
-                    cardHeight = BilibiliConst.AV_CARD_HEIGHT,
-                )
+        return if (archiveList.isNotEmpty()) {
+            MediaCardRow(
+                title = "历史记录-视频",
+                list = archiveList.map {
+                    MediaCard(
+                        id = it.history.bvid,
+                        detailUrl = BiliVideoDetailUrlAttrs(
+                            bvid = it.history.bvid,
+                            page = it.history.page
+                        ).toJsonString(),
+                        title = it.title,
+                        subTitle = it.authorName,
+                        coverImageUrl = it.cover,
+                    )
+                },
+                cardWidth = BilibiliConst.AV_CARD_WIDTH,
+                cardHeight = BilibiliConst.AV_CARD_HEIGHT,
             )
-        }
+        } else null
     }
 
-    private suspend fun appendLiveHistory(rows: MutableList<MediaCardRow>) {
+    private suspend fun getLiveHistoryRow(): MediaCardRow? {
         val list = mutableListOf<History>()
         loopLoadHistory(num = 0, maxNum = 3, business = "live", list = list)
         val liveList = list.filter { it.history.business == "live" }
-        if (liveList.isNotEmpty()) {
-            rows.add(
-                MediaCardRow(
-                    title = "历史记录-直播",
-                    list = liveList.map {
-                        MediaCard(
-                            id = "${MediaDetailService.MEDIA_ID_LIVE_ROOM_PREFIX}${it.history.oid}",
-                            detailUrl = "${MediaDetailService.MEDIA_ID_LIVE_ROOM_PREFIX}${it.history.oid}",
-                            title = it.title,
-                            subTitle = "直播 ${it.authorName}",
-                            coverImageUrl = it.cover,
-                        )
-                    },
-                    cardWidth = BilibiliConst.AV_CARD_WIDTH,
-                    cardHeight = BilibiliConst.AV_CARD_HEIGHT,
-                )
+        return if (liveList.isNotEmpty()) {
+            MediaCardRow(
+                title = "历史记录-直播",
+                list = liveList.map {
+                    MediaCard(
+                        id = "${MediaDetailService.MEDIA_ID_LIVE_ROOM_PREFIX}${it.history.oid}",
+                        detailUrl = "${MediaDetailService.MEDIA_ID_LIVE_ROOM_PREFIX}${it.history.oid}",
+                        title = it.title,
+                        subTitle = "直播 ${it.authorName}",
+                        coverImageUrl = it.cover,
+                    )
+                },
+                cardWidth = BilibiliConst.AV_CARD_WIDTH,
+                cardHeight = BilibiliConst.AV_CARD_HEIGHT,
             )
-        }
+        } else null
     }
 
     private suspend fun loopLoadHistory(
@@ -329,28 +322,23 @@ class MainScreenService(
         }
     }
 
-    private fun appendLoginInfoRow(rows: MutableList<MediaCardRow>) {
-        when (val s = loginState) {
+    private fun getLoginInfoRow(): MediaCardRow {
+        return when (val s = loginState) {
             is LoginState.Logged -> {
-                rows.add(
-                    MediaCardRow(
-                        title = "个人信息",
-                        list = listOf(ActionDelegate.createLogoutCard(s)),
-                        cardWidth = BilibiliConst.AVATAR_CARD_WIDTH,
-                        cardHeight = BilibiliConst.AVATAR_CARD_HEIGHT,
-                    )
+                MediaCardRow(
+                    title = "个人信息",
+                    list = listOf(ActionDelegate.createLogoutCard(s)),
+                    cardWidth = BilibiliConst.AVATAR_CARD_WIDTH,
+                    cardHeight = BilibiliConst.AVATAR_CARD_HEIGHT,
                 )
             }
-
             LoginState.NotLogin -> {
-                rows.add(
-                    MediaCardRow(
-                        title = "个人信息",
-                        list = listOf(ActionDelegate.LOGIN_ACTION_CARD),
-                        cardWidth = BilibiliConst.BUTTON_CARD_WIDTH,
-                        cardHeight = BilibiliConst.BUTTON_CARD_HEIGHT,
-                        cardType = MediaCardType.NOT_IMAGE
-                    )
+                MediaCardRow(
+                    title = "个人信息",
+                    list = listOf(ActionDelegate.LOGIN_ACTION_CARD),
+                    cardWidth = BilibiliConst.BUTTON_CARD_WIDTH,
+                    cardHeight = BilibiliConst.BUTTON_CARD_HEIGHT,
+                    cardType = MediaCardType.NOT_IMAGE
                 )
             }
         }
