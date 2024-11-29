@@ -12,6 +12,8 @@ import com.muedsa.tvbox.bilibili.model.bilibili.PopularFlow
 import com.muedsa.tvbox.bilibili.model.bilibili.Rcmd
 import com.muedsa.tvbox.bilibili.model.bilibili.SearchEsResult
 import com.muedsa.tvbox.bilibili.model.bilibili.SearchResult
+import com.muedsa.tvbox.bilibili.model.bilibili.SpaceSearchResult
+import com.muedsa.tvbox.bilibili.model.bilibili.SpaceUserInfo
 import com.muedsa.tvbox.bilibili.model.bilibili.TopFeed
 import com.muedsa.tvbox.bilibili.model.bilibili.VideoDetail
 import com.muedsa.tvbox.bilibili.model.bilibili.WebTicket
@@ -98,4 +100,19 @@ interface BilibiliApiService {
         @Header("Referer") referer: String = "https://www.bilibili.com/v/popular/all/?spm_id_from=333.1007.0.0",
         @Header("User-Agent") userAgent: String = ChromeUserAgent,
     ) : BiliResp<PopularFlow>
+
+    @GET("x/space/wbi/acc/info")
+    suspend fun spaceWbiAccInfo(
+        @QueryMap params: Map<String, String>,
+        @Header("Referer") referer: String,
+        @Header("User-Agent") userAgent: String = ChromeUserAgent,
+    ): BiliResp<SpaceUserInfo>
+
+    @GET("x/space/wbi/arc/search")
+    suspend fun spaceWbiArcSearch(
+        @QueryMap params: Map<String, String>,
+        @Header("Referer") referer: String,
+        @Header("User-Agent") userAgent: String = ChromeUserAgent,
+    ) : BiliResp<SpaceSearchResult>
+
 }

@@ -1,6 +1,7 @@
 package com.muedsa.tvbox.bilibili.helper
 
 import com.muedsa.tvbox.tool.md5
+import java.net.URLDecoder
 import java.net.URLEncoder
 
 object WBIHelper {
@@ -45,4 +46,6 @@ object WBIHelper {
     }
 
     fun String.encodeURIComponent(): String = URLEncoder.encode(this, Charsets.UTF_8.name())
+
+    fun String.decodeURIComponent(): String = URLDecoder.decode(this, Charsets.UTF_8.name())
 }

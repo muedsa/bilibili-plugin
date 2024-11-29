@@ -14,15 +14,21 @@ import com.muedsa.tvbox.bilibili.BILI_WBI_MIXIN_KEY
 import com.muedsa.tvbox.bilibili.BilibiliConst
 import com.muedsa.tvbox.bilibili.helper.BiliApiHelper
 import com.muedsa.tvbox.bilibili.helper.BiliCookieHelper
+import com.muedsa.tvbox.bilibili.helper.WBIHelper.decodeURIComponent
 import com.muedsa.tvbox.bilibili.model.BiliVideoDetailUrlAttrs
 import com.muedsa.tvbox.bilibili.model.bilibili.LiveUserRoomInfo
 import com.muedsa.tvbox.bilibili.model.bilibili.RoomInfo
+import com.muedsa.tvbox.bilibili.model.bilibili.UserSpaceRenderData
 import com.muedsa.tvbox.bilibili.model.bilibili.VideoDetail
 import com.muedsa.tvbox.bilibili.model.bilibili.VideoPage
 import com.muedsa.tvbox.tool.ChromeUserAgent
 import com.muedsa.tvbox.tool.LenientJson
 import com.muedsa.tvbox.tool.SharedCookieSaver
+import com.muedsa.tvbox.tool.feignChrome
+import com.muedsa.tvbox.tool.get
 import com.muedsa.tvbox.tool.md5
+import com.muedsa.tvbox.tool.parseHtml
+import com.muedsa.tvbox.tool.toRequestBuild
 import kotlinx.serialization.encodeToString
 import okhttp3.OkHttpClient
 import java.text.SimpleDateFormat
@@ -58,6 +64,8 @@ class MediaDetailService(
             videoDetail(bvid = mediaId, page = page)
         } else if (mediaId.startsWith(MEDIA_ID_LIVE_ROOM_PREFIX)) {
             liveRoomDetail(roomId = mediaId.removePrefix(MEDIA_ID_LIVE_ROOM_PREFIX).toLong())
+        } else if (mediaId.startsWith(MEDIA_ID_USER_SPACE_PREFIX)) {
+            userSpaceDetail(mid = mediaId.removePrefix(MEDIA_ID_USER_SPACE_PREFIX).toLong())
         } else {
             TODO("暂不支持 $mediaId")
         }
@@ -156,7 +164,27 @@ class MediaDetailService(
                 cardWidth = BilibiliConst.AV_CARD_WIDTH,
                 cardHeight = BilibiliConst.AV_CARD_HEIGHT,
             ),
-            rows = emptyList()
+            rows = buildList {
+                if (info.owner?.mid != null && info.owner.mid > 0) {
+                    val userSpaceId = "$MEDIA_ID_USER_SPACE_PREFIX${info.owner.mid}"
+                    add(
+                        MediaCardRow(
+                            title = "其他",
+                            list = listOf(
+                                MediaCard(
+                                    id = userSpaceId,
+                                    title = "投稿视频",
+                                    subTitle = info.owner.name,
+                                    detailUrl = userSpaceId,
+                                    coverImageUrl = info.owner.face
+                                )
+                            ),
+                            cardWidth = BilibiliConst.AVATAR_CARD_WIDTH,
+                            cardHeight = BilibiliConst.AVATAR_CARD_HEIGHT
+                        )
+                    )
+                }
+            }
         )
     }
 
@@ -228,6 +256,7 @@ class MediaDetailService(
             throw RuntimeException("roomId或uid至少有一个不能为空")
         }
         val savedId = "$MEDIA_ID_LIVE_ROOM_PREFIX$roomId"
+        val userSpaceId = "$MEDIA_ID_USER_SPACE_PREFIX${roomInfo.uid}"
         return MediaDetail(
             id = savedId,
             title = liveUserRoomInfo.info.uname,
@@ -251,7 +280,22 @@ class MediaDetailService(
                 cardWidth = BilibiliConst.AV_CARD_WIDTH,
                 cardHeight = BilibiliConst.AV_CARD_HEIGHT,
             ),
-            rows = emptyList()
+            rows = listOf(
+                MediaCardRow(
+                    title = "其他",
+                    list = listOf(
+                        MediaCard(
+                            id = userSpaceId,
+                            title = "投稿视频",
+                            subTitle = liveUserRoomInfo.info.uname,
+                            detailUrl = userSpaceId,
+                            coverImageUrl = liveUserRoomInfo.info.face,
+                        )
+                    ),
+                    cardWidth = BilibiliConst.AVATAR_CARD_WIDTH,
+                    cardHeight = BilibiliConst.AVATAR_CARD_HEIGHT
+                )
+            )
         )
     }
 
@@ -294,6 +338,95 @@ class MediaDetailService(
         } else emptyList()
     }
 
+    private suspend fun userSpaceDetail(mid: Long): MediaDetail {
+        val mixinKey = store.get(BILI_WBI_MIXIN_KEY)
+            ?: throw RuntimeException("WBI鉴权参数未获取")
+        val url =
+            "https://space.bilibili.com/$mid/video?tid=0&special_type=&pn=1&keyword=&order=pubdate"
+        val head = url.toRequestBuild()
+            .feignChrome()
+            .get(okHttpClient = okHttpClient)
+            .parseHtml()
+            .head()
+        val html = head.selectFirst("#__RENDER_DATA__")?.html()
+            ?: throw RuntimeException("获取access_id失败")
+        val renderData =
+            LenientJson.decodeFromString<UserSpaceRenderData>(html.decodeURIComponent())
+        val resp = apiService.spaceWbiAccInfo(
+            params = BiliApiHelper.buildWbiAccInfoParams(
+                mid = mid,
+                wWebId = renderData.accessId,
+                mixinKey = mixinKey,
+            ),
+            referer = url
+        )
+        if (resp.code != 0L) throw RuntimeException(resp.message)
+        if (resp.data == null) throw RuntimeException("获取UP信息失败")
+        val savedId = "$MEDIA_ID_USER_SPACE_PREFIX$mid"
+        return MediaDetail(
+            id = savedId,
+            title = resp.data.name,
+            subTitle = null,
+            description = resp.data.sign,
+            detailUrl = savedId,
+            backgroundImageUrl = resp.data.face,
+            playSourceList = emptyList(),
+            favoritedMediaCard = ActionDelegate.INVALID_ACTION_SAVED_MEDIA_CARD,
+            rows = getUserSpaceVideoRow(
+                mid = resp.data.mid,
+                wWebId = renderData.accessId,
+                mixinKey = mixinKey,
+                referer = url
+            )
+        )
+    }
+
+
+    private suspend fun getUserSpaceVideoRow(
+        mid: Long,
+        wWebId: String,
+        mixinKey: String,
+        referer: String,
+    ): List<MediaCardRow> {
+        val rows = mutableListOf<MediaCardRow>()
+        var page = 1
+        while (page < 10) {
+            val params = BiliApiHelper.buildWbiArcSearchParams(
+                page = page,
+                pageSize = USER_SPACE_VIDEO_ROW_SIZE,
+                mid = mid,
+                wWebId = wWebId,
+                mixinKey = mixinKey
+            )
+            val resp = apiService.spaceWbiArcSearch(params = params, referer = referer)
+            if (resp.code != 0L) break
+            if (resp.data == null) break
+            if (resp.data.list.vlist.isEmpty()) break
+            rows.add(
+                MediaCardRow(
+                    title = "投稿视频-第${page}页",
+                    list = resp.data.list.vlist.map {
+                        MediaCard(
+                            id = it.bvid,
+                            detailUrl = BiliVideoDetailUrlAttrs(
+                                bvid = it.bvid,
+                                page = 1,
+                            ).toJsonString(),
+                            title = it.title,
+                            subTitle = if (it.isChargingArc) "充电专属" else "",
+                            coverImageUrl = it.pic
+                        )
+                    },
+                    cardWidth = BilibiliConst.AV_CARD_WIDTH,
+                    cardHeight = BilibiliConst.AV_CARD_HEIGHT,
+                )
+            )
+            if (page * USER_SPACE_VIDEO_ROW_SIZE > resp.data.page.count) break
+            page++
+        }
+        return rows
+    }
+
     override suspend fun getEpisodePlayInfo(
         playSource: MediaPlaySource,
         episode: MediaEpisode
@@ -331,11 +464,13 @@ class MediaDetailService(
     companion object {
         const val MEDIA_ID_BV_PREFIX = "BV"
         const val MEDIA_ID_LIVE_ROOM_PREFIX = "LIVE_ROOM:"
+        const val MEDIA_ID_USER_SPACE_PREFIX = "USER_SPACE:"
         val V_VOUCHER_MEDIA_EPISODE_LIST = listOf(
             MediaEpisode(
                 id = " MEDIA_EPISODE_V_VOUCHER",
                 name = "获取播放地址被风控, 需要人机验证",
             )
         )
+        const val USER_SPACE_VIDEO_ROW_SIZE = 30
     }
 }
