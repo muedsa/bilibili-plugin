@@ -9,22 +9,22 @@ fun checkMediaCardRows(rows: List<MediaCardRow>) {
 }
 
 fun checkMediaCardRow(row: MediaCardRow) {
-    check(row.title.isNotEmpty())
-    check(row.list.isNotEmpty())
-    check(row.cardWidth > 0)
-    check(row.cardHeight > 0)
+    check(row.title.isNotEmpty())  { "${row.title} -> title" }
+    check(row.list.isNotEmpty())  { "${row.title} -> list" }
+    check(row.cardWidth > 0)  { "${row.title} -> cardWidth" }
+    check(row.cardHeight > 0)  { "${row.title} -> cardHeight" }
     row.list.forEach {
-        checkMediaCard(card = it, cardType = row.cardType)
+        checkMediaCard(card = it, cardType = row.cardType) { "${row.title} -> $it" }
     }
 }
 
-fun checkMediaCard(card: MediaCard, cardType: MediaCardType) {
-    check(card.id.isNotEmpty())
-    check(card.title.isNotEmpty())
-    check(card.detailUrl.isNotEmpty())
+fun checkMediaCard(card: MediaCard, cardType: MediaCardType, lazyMessage: () -> Any = { "" }) {
+    check(card.id.isNotEmpty()){ "${lazyMessage()} -> id" }
+    check(card.title.isNotEmpty()){ "${lazyMessage()} -> title" }
+    check(card.detailUrl.isNotEmpty()){ "${lazyMessage()} -> detailUrl" }
     if (cardType != MediaCardType.NOT_IMAGE) {
-        check(card.coverImageUrl.isNotEmpty())
+        check(card.coverImageUrl.isNotEmpty()) { "${lazyMessage()} -> coverImageUrl" }
     }  else {
-        check(card.backgroundColor > 0)
+        check(card.backgroundColor > 0) { "${lazyMessage()} -> backgroundColor" }
     }
 }

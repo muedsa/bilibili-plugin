@@ -2,6 +2,7 @@ package com.muedsa.tvbox.bilibili.service
 
 import com.muedsa.tvbox.bilibili.model.bilibili.BiliResp
 import com.muedsa.tvbox.bilibili.model.bilibili.LivePlayUrl
+import com.muedsa.tvbox.bilibili.model.bilibili.LiveUserFollowing
 import com.muedsa.tvbox.bilibili.model.bilibili.LiveUserRoomInfo
 import com.muedsa.tvbox.bilibili.model.bilibili.RoomInfo
 import com.muedsa.tvbox.tool.ChromeUserAgent
@@ -31,4 +32,20 @@ interface BilibiliLiveApiService {
         @Query("qn") qn: Int? = null,
         @Header("User-Agent") userAgent: String = ChromeUserAgent,
     ): BiliResp<LivePlayUrl>
+
+//    @GET("xlive/web-ucenter/v1/xfetter/GetWebList")
+//    suspend fun xfetterGetWebList(
+//        @Query("hit_ad") hitAd: Boolean = false,
+//        @Query("_") t: Long = System.currentTimeMillis() / 1000L,
+//    )
+
+    @GET("xlive/web-ucenter/user/following")
+    suspend fun userFollowing(
+        @Query("page") page: Int = 1,
+        @Query("page_size") pageSize: Int = 9, // max 29
+        @Query("ignoreRecord") ignoreRecord: Int = 1,
+        @Query("hit_ab") hitAb: Boolean = true,
+        @Header("Referer") referer: String = "https://link.bilibili.com/p/center/index",
+        @Header("User-Agent") userAgent: String = ChromeUserAgent,
+    ) : BiliResp<LiveUserFollowing>
 }

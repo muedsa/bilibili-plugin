@@ -61,6 +61,7 @@ class BilibiliPlugin(tvBoxContext: TvBoxContext) : IPlugin(tvBoxContext = tvBoxC
             cookieSaver = cookieSaver,
             okHttpClient = okHttpClient,
             apiService = bilibiliApiService,
+            liveApiService = bilibiliLiveApiService,
             passportService = bilibiliPassportService,
         )
     }

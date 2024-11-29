@@ -14,6 +14,7 @@ import com.muedsa.tvbox.bilibili.helper.BiliCookieHelper
 import com.muedsa.tvbox.bilibili.model.BiliVideoDetailUrlAttrs
 import com.muedsa.tvbox.bilibili.model.LoginState
 import com.muedsa.tvbox.bilibili.model.bilibili.DynamicCard
+import com.muedsa.tvbox.bilibili.model.bilibili.FollowingLiveUserInfo
 import com.muedsa.tvbox.bilibili.model.bilibili.History
 import com.muedsa.tvbox.bilibili.model.bilibili.TopFeed
 import com.muedsa.tvbox.tool.SharedCookieSaver
@@ -26,12 +27,14 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import okhttp3.OkHttpClient
+import timber.log.Timber
 
 class MainScreenService(
     private val store: IPluginPerfStore,
     private val cookieSaver: SharedCookieSaver,
     private val okHttpClient: OkHttpClient,
     private val apiService: BilibiliApiService,
+    private val liveApiService: BilibiliLiveApiService,
     private val passportService: BilibiliPassportService,
 ) : IMainScreenService {
 
@@ -42,11 +45,12 @@ class MainScreenService(
         checkLogin()
         return coroutineScope {
             listOf(
-                async(Dispatchers.IO) { getRecommendRow() },        // 推荐
-                async(Dispatchers.IO) { getDynamicRow() },          // 动态
-                async(Dispatchers.IO) { getVideoHistoryRow() },     // 历史记录-视频
-                async(Dispatchers.IO) { getLiveHistoryRow() },      // 历史记录-直播
-                async(Dispatchers.IO) { getLoginInfoRow() },        // 个人信息
+                async(Dispatchers.IO) { getRecommendRow() },            // 推荐
+                async(Dispatchers.IO) { getDynamicRow() },              // 视频动态
+                async(Dispatchers.IO) { getFollowingLiveUserRow() },    // 正在直播
+                async(Dispatchers.IO) { getVideoHistoryRow() },         // 历史记录-视频
+                async(Dispatchers.IO) { getLiveHistoryRow() },          // 历史记录-直播
+                async(Dispatchers.IO) { getLoginInfoRow() },            // 个人信息
             ).awaitAll().filterNotNull()
         }
     }
@@ -69,11 +73,12 @@ class MainScreenService(
                             coverImageUrl = it.pic
                         )
                     } else if (it.goto == "live") {
+                        val id = "${MediaDetailService.MEDIA_ID_LIVE_ROOM_PREFIX}${it.id}"
                         MediaCard(
-                            id = "${MediaDetailService.MEDIA_ID_LIVE_ROOM_PREFIX}${it.id}",
-                            detailUrl = BiliVideoDetailUrlAttrs(bvid = it.bvid).toJsonString(),
+                            id = id,
+                            detailUrl = id,
                             title = it.title,
-                            subTitle = "直播 ${it.owner?.name ?: ""}",
+                            subTitle = "[直播]${it.owner?.name ?: ""}",
                             coverImageUrl = it.pic
                         )
                     } else null
@@ -159,6 +164,60 @@ class MainScreenService(
         }
     }
 
+    private suspend fun getFollowingLiveUserRow(): MediaCardRow? {
+        val list = mutableListOf<FollowingLiveUserInfo>()
+        loopLoadFollowingLiveUser(list = list)
+        return if (list.isNotEmpty()) {
+            MediaCardRow(
+                title = "正在直播",
+                list = list.map {
+                    val id = "${MediaDetailService.MEDIA_ID_LIVE_ROOM_PREFIX}${it.roomId}"
+                    MediaCard(
+                        id = id,
+                        detailUrl = id,
+                        title = it.title,
+                        subTitle = "[直播]${it.uname}",
+                        coverImageUrl = it.roomCover,
+                    )
+                },
+                cardWidth = BilibiliConst.AV_CARD_WIDTH,
+                cardHeight = BilibiliConst.AV_CARD_HEIGHT,
+            )
+        } else null
+    }
+
+    private suspend fun loopLoadFollowingLiveUser(
+        page: Int = 1,
+        maxPage: Int = -1,
+        pageSize: Int = 29,
+        list: MutableList<FollowingLiveUserInfo>
+    ) {
+        if (maxPage > 0 && page > maxPage) return
+        val resp = liveApiService.userFollowing(page = page, pageSize = pageSize)
+        if (resp.code == 0L) {
+            val liveList = resp.data?.list?.filter { it.liveStatus == 1 }
+            if (!liveList.isNullOrEmpty()) {
+                list.addAll(liveList)
+            }
+        } else {
+            return
+        }
+        val newMaxPage = if (maxPage <= 0) {
+            val liveCount = resp.data?.liveCount ?: 0
+            Timber.d("liveCount = $liveCount")
+            if (liveCount > 0) {
+                val size = resp.data?.pageSize ?: pageSize
+                (liveCount / size) + (if (liveCount % size == 0) 0 else 1)
+            } else 1
+        } else maxPage
+        loopLoadFollowingLiveUser(
+            page = page + 1,
+            maxPage = newMaxPage,
+            pageSize = pageSize,
+            list = list
+        )
+    }
+
     private suspend fun getVideoHistoryRow(): MediaCardRow? {
         val list = mutableListOf<History>()
         loopLoadHistory(num = 0, maxNum = 3, business = "archive", list = list)
@@ -192,11 +251,12 @@ class MainScreenService(
             MediaCardRow(
                 title = "历史记录-直播",
                 list = liveList.map {
+                    val id = "${MediaDetailService.MEDIA_ID_LIVE_ROOM_PREFIX}${it.history.oid}"
                     MediaCard(
-                        id = "${MediaDetailService.MEDIA_ID_LIVE_ROOM_PREFIX}${it.history.oid}",
-                        detailUrl = "${MediaDetailService.MEDIA_ID_LIVE_ROOM_PREFIX}${it.history.oid}",
+                        id = id,
+                        detailUrl = id,
                         title = it.title,
-                        subTitle = "直播 ${it.authorName}",
+                        subTitle = "[直播]${it.authorName}",
                         coverImageUrl = it.cover,
                     )
                 },
