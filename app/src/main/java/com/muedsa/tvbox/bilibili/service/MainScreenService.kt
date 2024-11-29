@@ -160,6 +160,7 @@ class MainScreenService(
     }
 
     private suspend fun getDynamicRow(): MediaCardRow? {
+        if (loginState !is LoginState.Logged) return null
         val list = mutableListOf<DynamicCard>()
         loopLoadDynamic(page = 1, maxPage = 5, offset = null, list = list)
         val archiveList =
@@ -210,6 +211,7 @@ class MainScreenService(
     }
 
     private suspend fun getFollowingLiveUserRow(): MediaCardRow? {
+        if (loginState !is LoginState.Logged) return null
         val list = mutableListOf<FollowingLiveUserInfo>()
         loopLoadFollowingLiveUser(list = list)
         return if (list.isNotEmpty()) {
@@ -264,6 +266,7 @@ class MainScreenService(
     }
 
     private suspend fun getVideoHistoryRow(): MediaCardRow? {
+        if (loginState !is LoginState.Logged) return null
         val list = mutableListOf<History>()
         loopLoadHistory(num = 0, maxNum = 3, business = "archive", list = list)
         val archiveList = list.filter { it.history.business == "archive" }
@@ -289,6 +292,7 @@ class MainScreenService(
     }
 
     private suspend fun getLiveHistoryRow(): MediaCardRow? {
+        if (loginState !is LoginState.Logged) return null
         val list = mutableListOf<History>()
         loopLoadHistory(num = 0, maxNum = 3, business = "live", list = list)
         val liveList = list.filter { it.history.business == "live" }
@@ -340,6 +344,7 @@ class MainScreenService(
     }
 
     private suspend fun getHistoryToViewRow(): MediaCardRow? {
+        if (loginState !is LoginState.Logged) return null
         val resp = apiService.historyToViewWeb()
         return if (resp.code == 0L&& resp.data != null && resp.data.list.isNotEmpty()) {
             MediaCardRow(
