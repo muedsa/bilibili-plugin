@@ -52,6 +52,7 @@ class MainScreenService(
                 async(Dispatchers.IO) { getFollowingLiveUserRow() },    // 正在直播
                 async(Dispatchers.IO) { getVideoHistoryRow() },         // 历史记录-视频
                 async(Dispatchers.IO) { getLiveHistoryRow() },          // 历史记录-直播
+                async(Dispatchers.IO) { getHistoryToViewRow() },        // 稍后再看
                 async(Dispatchers.IO) { getLoginInfoRow() },            // 个人信息
             ).awaitAll().filterNotNull()
         }
@@ -336,6 +337,26 @@ class MainScreenService(
         } else {
             return
         }
+    }
+
+    private suspend fun getHistoryToViewRow(): MediaCardRow? {
+        val resp = apiService.historyToViewWeb()
+        return if (resp.code == 0L&& resp.data != null && resp.data.list.isNotEmpty()) {
+            MediaCardRow(
+                title = "稍后再看",
+                list = resp.data.list.map {
+                    MediaCard(
+                        id = it.bvid,
+                        detailUrl = BiliVideoDetailUrlAttrs(bvid = it.bvid).toJsonString(),
+                        title = it.title,
+                        subTitle = it.owner?.name ?: "",
+                        coverImageUrl = it.pic
+                    )
+                },
+                cardWidth = BilibiliConst.AV_CARD_WIDTH,
+                cardHeight = BilibiliConst.AV_CARD_HEIGHT,
+            )
+        } else null
     }
 
     private suspend fun checkLogin() {

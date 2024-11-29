@@ -6,6 +6,7 @@ import com.muedsa.tvbox.bilibili.model.bilibili.DataFlow
 import com.muedsa.tvbox.bilibili.model.bilibili.DynamicCard
 import com.muedsa.tvbox.bilibili.model.bilibili.FingerSpi
 import com.muedsa.tvbox.bilibili.model.bilibili.HistoryCursorFlow
+import com.muedsa.tvbox.bilibili.model.bilibili.HistoryToView
 import com.muedsa.tvbox.bilibili.model.bilibili.Nav
 import com.muedsa.tvbox.bilibili.model.bilibili.PlayUrl
 import com.muedsa.tvbox.bilibili.model.bilibili.PopularFlow
@@ -115,4 +116,10 @@ interface BilibiliApiService {
         @Header("User-Agent") userAgent: String = ChromeUserAgent,
     ) : BiliResp<SpaceSearchResult>
 
+    @GET("x/v2/history/toview/web")
+    suspend fun historyToViewWeb(
+        @Query("web_location") webLocation: String = "333.1007",
+        @Header("Referer") referer: String = "https://www.bilibili.com/",
+        @Header("User-Agent") userAgent: String = ChromeUserAgent,
+    ) : BiliResp<HistoryToView>
 }
