@@ -253,7 +253,7 @@ class MediaDetailService(
                 throw RuntimeException("获取直播间信息失败 ${roomInfoResp.message}")
             }
             roomInfo = roomInfoResp.data
-            val liveUserInfoResp = liveApiService.getLiveUserInfo(uid = roomId)
+            val liveUserInfoResp = liveApiService.getLiveUserInfo(uid = roomInfo.uid)
             if (liveUserInfoResp.code != 0L || liveUserInfoResp.data == null) {
                 throw RuntimeException("获取直播间信息失败 ${liveUserInfoResp.message}")
             }
