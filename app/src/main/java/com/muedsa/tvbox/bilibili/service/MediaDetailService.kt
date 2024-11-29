@@ -15,23 +15,16 @@ import com.muedsa.tvbox.bilibili.BilibiliConst
 import com.muedsa.tvbox.bilibili.helper.BiliApiHelper
 import com.muedsa.tvbox.bilibili.helper.BiliCookieHelper
 import com.muedsa.tvbox.bilibili.model.BiliVideoDetailUrlAttrs
-import com.muedsa.tvbox.bilibili.model.bilibili.BiliResp
 import com.muedsa.tvbox.bilibili.model.bilibili.LiveUserRoomInfo
-import com.muedsa.tvbox.bilibili.model.bilibili.PlayUrl
 import com.muedsa.tvbox.bilibili.model.bilibili.RoomInfo
 import com.muedsa.tvbox.bilibili.model.bilibili.VideoDetail
 import com.muedsa.tvbox.bilibili.model.bilibili.VideoPage
 import com.muedsa.tvbox.tool.ChromeUserAgent
 import com.muedsa.tvbox.tool.LenientJson
 import com.muedsa.tvbox.tool.SharedCookieSaver
-import com.muedsa.tvbox.tool.feignChrome
-import com.muedsa.tvbox.tool.get
 import com.muedsa.tvbox.tool.md5
-import com.muedsa.tvbox.tool.parseHtml
-import com.muedsa.tvbox.tool.toRequestBuild
 import kotlinx.serialization.encodeToString
 import okhttp3.OkHttpClient
-import timber.log.Timber
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -165,44 +158,6 @@ class MediaDetailService(
             ),
             rows = emptyList()
         )
-    }
-
-    private fun getVideoEpisodeListFromHtml(info: VideoDetail, pageInfo: VideoPage): List<MediaEpisode> {
-        val url = "${BilibiliConst.MAIN_SITE_URL}/video/${info.bvid}/?spm_id_from=333.1007.tianma.1-1-1.click"
-        val head = url.toRequestBuild()
-            .feignChrome(referer = "${BilibiliConst.MAIN_SITE_URL}/")
-            .get(okHttpClient = okHttpClient)
-            .parseHtml()
-            .head()
-        val playUrlJson = PLAY_URL_REGEX.find(head.html())?.groups[1]?.value
-        Timber.d("playUrl=$playUrlJson")
-        if (playUrlJson.isNullOrEmpty()) {
-            return V_VOUCHER_MEDIA_EPISODE_LIST
-        }
-        val resp = LenientJson.decodeFromString<BiliResp<PlayUrl>>(playUrlJson)
-        if (resp.code != 0L || resp.data == null) {
-            return listOf(
-                MediaEpisode(
-                    id = " MEDIA_EPISODE_ERROR",
-                    name = "获取失败: ${resp.message}",
-                )
-            )
-        }
-        if (!resp.data.vVoucher.isNullOrEmpty()) {
-            return V_VOUCHER_MEDIA_EPISODE_LIST
-        }
-        return resp.data.dash.video.map { videoTrack ->
-            val qualityName =
-                resp.data.supportFormat.find { it.quality == videoTrack.id }?.newDescription ?: "??"
-            MediaEpisode(
-                id = "${pageInfo.cid}",
-                name = "$qualityName(${videoTrack.codecs})",
-                flag3 = pageInfo.cid,
-                flag5 = info.bvid,
-                flag6 = videoTrack.baseUrl,
-                flag7 = resp.data.dash.audio.firstOrNull()?.baseUrl,
-            )
-        }
     }
 
     @OptIn(ExperimentalStdlibApi::class)
@@ -382,7 +337,5 @@ class MediaDetailService(
                 name = "获取播放地址被风控, 需要人机验证",
             )
         )
-
-        val PLAY_URL_REGEX = "<script>window\\.__playinfo__=(\\{.*?\\})</script>".toRegex()
     }
 }
