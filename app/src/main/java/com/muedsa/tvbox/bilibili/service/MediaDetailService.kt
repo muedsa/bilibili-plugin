@@ -133,6 +133,9 @@ class MediaDetailService(
             title = info.title,
             subTitle = pageInfo.part,
             description = buildList<String> {
+                if (info.isUpowerExclusive) {
+                    add("【充电专属】")
+                }
                 add(info.tname)
                 val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
                 val zoneId = TimeZone.getTimeZone("Asia/Shanghai")
