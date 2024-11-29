@@ -78,4 +78,18 @@ object BiliApiHelper {
         WBIHelper.fillWbiParams(params = params, mixinKey = mixinKey)
         return params
     }
+
+    fun buildPopularParams(
+        page: Int = 1,
+        pageSize: Int = 20,
+        mixinKey: String
+    ): MutableMap<String, String> {
+        val params = mutableMapOf<String, String>(
+            "pn" to "$page",
+            "ps" to "$pageSize",
+            "web_location" to "333.934",
+        )
+        WBIHelper.fillWbiParams(params = params, mixinKey = mixinKey)
+        return params
+    }
 }

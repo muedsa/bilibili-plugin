@@ -8,6 +8,7 @@ import com.muedsa.tvbox.bilibili.model.bilibili.FingerSpi
 import com.muedsa.tvbox.bilibili.model.bilibili.HistoryCursorFlow
 import com.muedsa.tvbox.bilibili.model.bilibili.Nav
 import com.muedsa.tvbox.bilibili.model.bilibili.PlayUrl
+import com.muedsa.tvbox.bilibili.model.bilibili.PopularFlow
 import com.muedsa.tvbox.bilibili.model.bilibili.Rcmd
 import com.muedsa.tvbox.bilibili.model.bilibili.SearchEsResult
 import com.muedsa.tvbox.bilibili.model.bilibili.SearchResult
@@ -90,4 +91,11 @@ interface BilibiliApiService {
         @Header("Referer") referer: String = "https://search.bilibili.com/",
         @Header("User-Agent") userAgent: String = ChromeUserAgent,
     ) : BiliResp<SearchEsResult<SearchResult>>
+
+    @GET("x/web-interface/popular")
+    suspend fun popular(
+        @QueryMap params: Map<String, String>,
+        @Header("Referer") referer: String = "https://www.bilibili.com/v/popular/all/?spm_id_from=333.1007.0.0",
+        @Header("User-Agent") userAgent: String = ChromeUserAgent,
+    ) : BiliResp<PopularFlow>
 }

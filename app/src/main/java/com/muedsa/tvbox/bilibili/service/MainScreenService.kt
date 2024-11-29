@@ -16,6 +16,7 @@ import com.muedsa.tvbox.bilibili.model.LoginState
 import com.muedsa.tvbox.bilibili.model.bilibili.DynamicCard
 import com.muedsa.tvbox.bilibili.model.bilibili.FollowingLiveUserInfo
 import com.muedsa.tvbox.bilibili.model.bilibili.History
+import com.muedsa.tvbox.bilibili.model.bilibili.PopularVideo
 import com.muedsa.tvbox.bilibili.model.bilibili.TopFeed
 import com.muedsa.tvbox.tool.SharedCookieSaver
 import com.muedsa.tvbox.tool.checkSuccess
@@ -45,6 +46,7 @@ class MainScreenService(
         checkLogin()
         return coroutineScope {
             listOf(
+                async(Dispatchers.IO) { getPopularRow() },              // 热门
                 async(Dispatchers.IO) { getRecommendRow() },            // 推荐
                 async(Dispatchers.IO) { getDynamicRow() },              // 视频动态
                 async(Dispatchers.IO) { getFollowingLiveUserRow() },    // 正在直播
@@ -53,6 +55,48 @@ class MainScreenService(
                 async(Dispatchers.IO) { getLoginInfoRow() },            // 个人信息
             ).awaitAll().filterNotNull()
         }
+    }
+
+    private suspend fun getPopularRow(): MediaCardRow? {
+        val list = mutableListOf<PopularVideo>()
+        loopLoadPopular(list = list)
+        return if (list.isNotEmpty()) {
+            MediaCardRow(
+                title = "热门视频",
+                list = list.map {
+                    MediaCard(
+                        id = it.bvid,
+                        detailUrl = BiliVideoDetailUrlAttrs(bvid = it.bvid).toJsonString(),
+                        title = it.title,
+                        subTitle = it.owner?.name ?: "",
+                        coverImageUrl = it.pic
+                    )
+                },
+                cardWidth = BilibiliConst.AV_CARD_WIDTH,
+                cardHeight = BilibiliConst.AV_CARD_HEIGHT,
+            )
+        } else null
+    }
+
+    private suspend fun loopLoadPopular(
+        page: Int = 1,
+        maxPage: Int = 5,
+        pageSize: Int = 20,
+        list: MutableList<PopularVideo>
+    ) {
+        if (page > maxPage) return
+        val resp = apiService.popular(
+            params = BiliApiHelper.buildPopularParams(
+                page = page,
+                pageSize = pageSize,
+                mixinKey = mixinKey
+            )
+        )
+        if (resp.code != 0L || resp.data == null || resp.data.noMore || resp.data.list.isEmpty()) {
+            return
+        }
+        list.addAll(resp.data.list)
+        loopLoadPopular(page = page + 1, maxPage = maxPage, pageSize = pageSize, list = list)
     }
 
     private suspend fun getRecommendRow(): MediaCardRow? {
