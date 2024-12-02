@@ -3,7 +3,6 @@ package com.muedsa.tvbox.bilibili.service
 import com.muedsa.tvbox.api.data.MediaCard
 import com.muedsa.tvbox.api.data.MediaCardRow
 import com.muedsa.tvbox.api.data.MediaDetail
-import com.muedsa.tvbox.api.data.SavedMediaCard
 import com.muedsa.tvbox.api.store.IPluginPerfStore
 import com.muedsa.tvbox.bilibili.BILI_REFRESH_TOKEN_KEY
 import com.muedsa.tvbox.bilibili.BilibiliConst
@@ -116,15 +115,7 @@ class ActionDelegate(
             detailUrl = ACTION_QRCODE_LOGIN,
         )
 
-        val INVALID_ACTION_SAVED_MEDIA_CARD = SavedMediaCard(
-            id = ACTION_INVALID,
-            title = "无效的内容请删除",
-            subTitle = "无效的内容请删除",
-            detailUrl = ACTION_INVALID,
-            coverImageUrl = "",
-            cardWidth = BilibiliConst.AV_CARD_WIDTH,
-            cardHeight = BilibiliConst.AV_CARD_HEIGHT,
-        )
+        val INVALID_ACTION_SAVED_MEDIA_CARD = null
 
         val LOGIN_SUCCESS_MEDIA_DETAIL = MediaDetail(
             id = ACTION_QRCODE_LOGIN,
@@ -135,6 +126,7 @@ class ActionDelegate(
             description = "登录成功,请返回首页",
             playSourceList = listOf(),
             favoritedMediaCard = INVALID_ACTION_SAVED_MEDIA_CARD,
+            disableEpisodeProgression = true,
         )
 
         fun createLogoutCard(state: LoginState.Logged): MediaCard =
@@ -182,7 +174,8 @@ class ActionDelegate(
                         cardWidth = BilibiliConst.QRCODE_CARD_WIDTH,
                         cardHeight = BilibiliConst.QRCODE_CARD_HEIGHT,
                     )
-                )
+                ),
+                disableEpisodeProgression = true,
             )
 
     }

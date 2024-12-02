@@ -295,7 +295,8 @@ class MediaDetailService(
                     cardWidth = BilibiliConst.AVATAR_CARD_WIDTH,
                     cardHeight = BilibiliConst.AVATAR_CARD_HEIGHT
                 )
-            )
+            ),
+            disableEpisodeProgression = true,
         )
     }
 
