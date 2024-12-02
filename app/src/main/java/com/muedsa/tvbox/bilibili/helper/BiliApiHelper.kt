@@ -142,4 +142,19 @@ object BiliApiHelper {
 
     const val DM_IMG_STR = "V2ViR0wgMS4wIChPcGVuR0wgRVMgMi4wIENocm9taXVtKQ"
     const val DM_COVER_IMG_STR = "QU5HTEUgKEludGVsLCBJbnRlbChSKSBVSEQgR3JhcGhpY3MgNjMwICgweDAwMDA5QkM4KSBEaXJlY3QzRDExIHZzXzVfMCBwc181XzAsIEQzRDExKUdvb2dsZSBJbmMuIChJbnRlbC"
+
+    fun buildDmWbiWebSegSoParams(
+        oid: Long,
+        segmentIndex: Int,
+        mixinKey: String,
+    ): MutableMap<String, String> {
+        val params = mutableMapOf<String, String>(
+            "type" to "1",
+            "oid" to "$oid",
+            "segment_index" to "$segmentIndex",
+        )
+        WBIHelper.fillWbiParams(params = params, mixinKey = mixinKey)
+        return params
+    }
+
 }

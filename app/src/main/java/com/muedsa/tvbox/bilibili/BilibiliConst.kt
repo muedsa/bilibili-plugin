@@ -16,4 +16,9 @@ object BilibiliConst {
     const val BUTTON_CARD_HEIGHT = 100
     const val QRCODE_CARD_WIDTH = 200
     const val QRCODE_CARD_HEIGHT = 200
+
+    const val CMD_DANMU_MSG = "DANMU_MSG"
+//    const val CMD_SUPER_CHAT_MESSAGE = "SUPER_CHAT_MESSAGE"
+//    const val CMD_SUPER_CHAT_MESSAGE_JPN = "SUPER_CHAT_MESSAGE_JPN"
+//    const val CMD_SEND_GIFT = "SEND_GIFT"
 }

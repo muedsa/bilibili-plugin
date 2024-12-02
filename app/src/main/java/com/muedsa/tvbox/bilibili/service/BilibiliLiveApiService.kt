@@ -1,6 +1,7 @@
 package com.muedsa.tvbox.bilibili.service
 
 import com.muedsa.tvbox.bilibili.model.bilibili.BiliResp
+import com.muedsa.tvbox.bilibili.model.bilibili.DanmakuInfo
 import com.muedsa.tvbox.bilibili.model.bilibili.LivePlayUrl
 import com.muedsa.tvbox.bilibili.model.bilibili.LiveUserFollowing
 import com.muedsa.tvbox.bilibili.model.bilibili.LiveUserRoomInfo
@@ -47,5 +48,11 @@ interface BilibiliLiveApiService {
         @Query("hit_ab") hitAb: Boolean = true,
         @Header("Referer") referer: String = "https://link.bilibili.com/p/center/index",
         @Header("User-Agent") userAgent: String = ChromeUserAgent,
-    ) : BiliResp<LiveUserFollowing>
+    ): BiliResp<LiveUserFollowing>
+
+    @GET("xlive/web-room/v1/index/getDanmuInfo")
+    suspend fun getDanmuInfo(
+        @Query("id") id: Long,
+        @Query("type") type: Int = 0,
+    ): BiliResp<DanmakuInfo>
 }

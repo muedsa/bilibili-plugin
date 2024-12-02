@@ -1,5 +1,7 @@
 package com.muedsa.tvbox.bilibili.service
 
+import com.muedsa.tvbox.api.data.DanmakuData
+import com.muedsa.tvbox.api.data.DanmakuDataFlow
 import com.muedsa.tvbox.api.data.MediaCard
 import com.muedsa.tvbox.api.data.MediaCardRow
 import com.muedsa.tvbox.api.data.MediaDetail
@@ -31,10 +33,12 @@ import com.muedsa.tvbox.tool.parseHtml
 import com.muedsa.tvbox.tool.toRequestBuild
 import kotlinx.serialization.encodeToString
 import okhttp3.OkHttpClient
+import timber.log.Timber
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
+import kotlin.math.ceil
 
 class MediaDetailService(
     private val store: IPluginPerfStore,
@@ -43,6 +47,7 @@ class MediaDetailService(
     passportService: BilibiliPassportService,
     private val apiService: BilibiliApiService,
     private val liveApiService: BilibiliLiveApiService,
+    private val apiGrpcService: BilibiliApiGrpcService,
 ) : IMediaDetailService {
 
     private val actionDelegate = ActionDelegate(
@@ -184,7 +189,8 @@ class MediaDetailService(
                         )
                     )
                 }
-            }
+            },
+            enableCustomDanmakuList = true,
         )
     }
 
@@ -219,6 +225,7 @@ class MediaDetailService(
             MediaEpisode(
                 id = "${info.bvid}_${pageInfo.cid}",
                 name = "$qualityName(${videoTrack.codecs})",
+                flag1 = ceil(resp.data.timeLength / 360000.0).toInt(),
                 flag3 = pageInfo.cid,
                 flag5 = info.bvid,
                 flag6 = videoTrack.baseUrl,
@@ -297,6 +304,7 @@ class MediaDetailService(
                 )
             ),
             disableEpisodeProgression = true,
+            enableCustomDanmakuFlow = true,
         )
     }
 
@@ -378,7 +386,8 @@ class MediaDetailService(
                 wWebId = renderData.accessId,
                 mixinKey = mixinKey,
                 referer = url
-            )
+            ),
+            disableEpisodeProgression = true
         )
     }
 
@@ -460,6 +469,77 @@ class MediaDetailService(
         // val roomId = episode.id.removePrefix(MEDIA_ID_LIVE_ROOM_PREFIX)
         val url = episode.flag5 ?: throw RuntimeException("获取直播地址失败")
         return MediaHttpSource(url = url)
+    }
+
+    override suspend fun getEpisodeDanmakuDataList(episode: MediaEpisode): List<DanmakuData> {
+        return if (
+            episode.id.startsWith(MEDIA_ID_BV_PREFIX)
+            && episode.flag1 != null
+            && episode.flag3 != null
+        ) {
+            val mixinKey = store.get(BILI_WBI_MIXIN_KEY) ?: throw RuntimeException("WBI鉴权参数未获取")
+            val maxIndex = episode.flag1!!
+            var index = 0
+            val list = mutableListOf<DanmakuData>()
+            while (index < maxIndex) {
+                val dmSegMobileReply = apiGrpcService.dmWbiWebSegSo(
+                    BiliApiHelper.buildDmWbiWebSegSoParams(
+                        oid = episode.flag3!!,
+                        segmentIndex = index + 1,
+                        mixinKey = mixinKey,
+                    )
+                )
+                list.addAll(
+                    dmSegMobileReply.elemsList.mapNotNull {
+                        val model: Int? = when(it.mode) {
+                            1,2,3 -> 1
+                            4 -> 4
+                            5 -> 5
+                            else -> null
+                        }
+                        if (model != null) {
+                            DanmakuData(
+                                danmakuId = it.id,
+                                position = it.progress.toLong(),
+                                content = it.content,
+                                textColor = it.color,
+                                mode = model,
+                                score = it.weight
+                            )
+                        } else null
+                    }
+                )
+                index++
+            }
+            list
+        } else emptyList()
+    }
+
+    override suspend fun getEpisodeDanmakuDataFlow(episode: MediaEpisode): DanmakuDataFlow? {
+        return if (episode.id.startsWith(MEDIA_ID_LIVE_ROOM_PREFIX)) {
+            val roomId = episode.flag3 ?: throw RuntimeException("")
+            val resp = liveApiService.getDanmuInfo(id = roomId)
+            if (resp.code != 0L || resp.data == null) {
+                Timber.e("获取直播间弹幕TOKEN失败: $resp")
+                null
+            } else {
+                val hostInfo = resp.data.hostList.first()
+                LiveDanmakuDataFlow(
+                    uid = BiliCookieHelper.getCookeValue(
+                        cookieSaver = cookieSaver,
+                        cookieName = BiliCookieHelper.COOKIE_UID,
+                        defaultValue = "0",
+                    )!!.toLong(),
+                    roomId = roomId,
+                    token = resp.data.token,
+                    request = "wss://${hostInfo.host}:${hostInfo.wssPort}/sub"
+                        .toRequestBuild()
+                        .header("User-Agent", ChromeUserAgent)
+                        .build(),
+                    okHttpClient = okHttpClient
+                )
+            }
+        } else null
     }
 
     companion object {

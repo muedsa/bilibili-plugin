@@ -8,6 +8,7 @@ import com.muedsa.tvbox.api.service.IMediaCatalogService
 import com.muedsa.tvbox.api.service.IMediaDetailService
 import com.muedsa.tvbox.api.service.IMediaSearchService
 import com.muedsa.tvbox.api.store.IPluginPerfStore
+import com.muedsa.tvbox.bilibili.service.BilibiliApiGrpcService
 import com.muedsa.tvbox.bilibili.service.BilibiliApiService
 import com.muedsa.tvbox.bilibili.service.BilibiliLiveApiService
 import com.muedsa.tvbox.bilibili.service.BilibiliPassportService
@@ -20,6 +21,8 @@ import com.muedsa.tvbox.tool.PluginCookieJar
 import com.muedsa.tvbox.tool.SharedCookieSaver
 import com.muedsa.tvbox.tool.createJsonRetrofit
 import com.muedsa.tvbox.tool.createOkHttpClient
+import retrofit2.Retrofit
+import retrofit2.converter.protobuf.ProtoConverterFactory
 
 class BilibiliPlugin(tvBoxContext: TvBoxContext) : IPlugin(tvBoxContext = tvBoxContext) {
 
@@ -55,6 +58,14 @@ class BilibiliPlugin(tvBoxContext: TvBoxContext) : IPlugin(tvBoxContext = tvBoxC
             okHttpClient = okHttpClient
         )
     }
+    private val bilibiliApiGrpcService by lazy {
+        Retrofit.Builder()
+            .baseUrl("${BilibiliConst.API_URL}/")
+            .addConverterFactory(ProtoConverterFactory.create())
+            .client(okHttpClient)
+            .build()
+            .create(BilibiliApiGrpcService::class.java)
+    }
     private val mainScreenService by lazy {
         MainScreenService(
             store = store,
@@ -73,6 +84,7 @@ class BilibiliPlugin(tvBoxContext: TvBoxContext) : IPlugin(tvBoxContext = tvBoxC
             passportService = bilibiliPassportService,
             apiService = bilibiliApiService,
             liveApiService = bilibiliLiveApiService,
+            apiGrpcService = bilibiliApiGrpcService,
         )
     }
     private val mediaSearchService by lazy {

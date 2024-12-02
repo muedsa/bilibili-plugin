@@ -5,6 +5,7 @@ import com.muedsa.tvbox.tool.SharedCookieSaver
 
 object BiliCookieHelper {
 
+    const val COOKIE_UID = "DedeUserID"
     const val COOKIE_B_3 = "buvid3"
     const val COOKIE_B_4 = "buvid4"
     const val COOKIE_B_NUT = "b_nut"
