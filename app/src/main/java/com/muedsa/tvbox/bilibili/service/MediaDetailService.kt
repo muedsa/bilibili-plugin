@@ -138,14 +138,14 @@ class MediaDetailService(
                     add("【充电专属】")
                 }
                 add(info.tname)
+                if (info.owner != null) {
+                    add(info.owner.name)
+                }
                 val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
                 val zoneId = TimeZone.getTimeZone("Asia/Shanghai")
                 sdf.timeZone = zoneId
                 val date = Date(info.pubDate * 1000L)
                 add(sdf.format(date))
-                if (info.owner != null) {
-                    add(info.owner.name)
-                }
             }.joinToString(" | ") + "\n\n${info.desc}",
             detailUrl = newDetailUrl,
             backgroundImageUrl = info.pic,
