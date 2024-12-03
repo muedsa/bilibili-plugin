@@ -43,6 +43,7 @@ object BiliApiHelper {
         bvid: String,
         cid: Long,
         qn: Int = 127,
+        fnval: Int = 4080,
         session: String,
         mixinKey: String,
     ):  MutableMap<String, String> {
@@ -50,7 +51,7 @@ object BiliApiHelper {
             "bvid" to bvid,
             "cid" to "$cid",
             "qn" to "$qn",
-            "fnval" to "4048",
+            "fnval" to "$fnval",
             "fnver" to "0",
             "fourk" to "1",
             "gaia_source" to "",
