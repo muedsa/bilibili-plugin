@@ -18,7 +18,9 @@ import com.muedsa.tvbox.bilibili.helper.BiliApiHelper
 import com.muedsa.tvbox.bilibili.helper.BiliCookieHelper
 import com.muedsa.tvbox.bilibili.helper.WBIHelper.decodeURIComponent
 import com.muedsa.tvbox.bilibili.model.BiliVideoDetailUrlAttrs
+import com.muedsa.tvbox.bilibili.model.bilibili.BiliResp
 import com.muedsa.tvbox.bilibili.model.bilibili.LiveUserRoomInfo
+import com.muedsa.tvbox.bilibili.model.bilibili.PlayUrl
 import com.muedsa.tvbox.bilibili.model.bilibili.RoomInfo
 import com.muedsa.tvbox.bilibili.model.bilibili.UserSpaceRenderData
 import com.muedsa.tvbox.bilibili.model.bilibili.VideoDetail
@@ -197,18 +199,32 @@ class MediaDetailService(
 
     @OptIn(ExperimentalStdlibApi::class)
     private suspend fun getVideoEpisodeList(info: VideoDetail, pageInfo: VideoPage): List<MediaEpisode> {
-        val b3 = BiliCookieHelper.getCookeValue(cookieSaver = cookieSaver, cookieName = BiliCookieHelper.COOKIE_B_3)
-        val session = "$b3${System.currentTimeMillis()}".md5().toHexString()
-        val resp = apiService.wbiPlayUrl(
-            BiliApiHelper.buildWbiPlayUrlParams(
-                bvid = info.bvid,
-                cid = pageInfo.cid,
-                session = session,
-                mixinKey = store.get(BILI_WBI_MIXIN_KEY)
-                    ?: throw RuntimeException("WBI鉴权参数未获取")
-            ),
-            referer = "${BilibiliConst.MAIN_SITE_URL}/video/${info.bvid}/?spm_id_from=333.1007.tianma.1-1-1.click"
-        )
+        var resp: BiliResp<PlayUrl>? = null
+        val url = "${BilibiliConst.MAIN_SITE_URL}/video/${info.bvid}/?spm_id_from=333.1007.tianma.1-1-1.click"
+        val head = url.toRequestBuild()
+            .feignChrome(referer = "${BilibiliConst.MAIN_SITE_URL}/")
+            .get(okHttpClient = okHttpClient)
+            .parseHtml()
+            .head()
+        val playUrlJson = PLAY_URL_REGEX.find(head.html())?.groups[1]?.value
+        Timber.d("playUrl=$playUrlJson")
+        if (playUrlJson.isNullOrEmpty()) {
+            // 尝试从SSR页面获取失败, 从接口请求获取
+            val b3 = BiliCookieHelper.getCookeValue(cookieSaver = cookieSaver, cookieName = BiliCookieHelper.COOKIE_B_3)
+            val session = "$b3${System.currentTimeMillis()}".md5().toHexString()
+            resp = apiService.wbiPlayUrl(
+                BiliApiHelper.buildWbiPlayUrlParams(
+                    bvid = info.bvid,
+                    cid = pageInfo.cid,
+                    session = session,
+                    mixinKey = store.get(BILI_WBI_MIXIN_KEY)
+                        ?: throw RuntimeException("WBI鉴权参数未获取")
+                ),
+                referer = url
+            )
+        } else {
+            resp = LenientJson.decodeFromString<BiliResp<PlayUrl>>(playUrlJson)
+        }
         if (resp.code != 0L || resp.data == null) {
             return listOf(
                 MediaEpisode(
@@ -554,5 +570,6 @@ class MediaDetailService(
             )
         )
         const val USER_SPACE_VIDEO_ROW_SIZE = 30
+        val PLAY_URL_REGEX = "<script>window\\.__playinfo__=(\\{.*?\\})</script>".toRegex()
     }
 }
