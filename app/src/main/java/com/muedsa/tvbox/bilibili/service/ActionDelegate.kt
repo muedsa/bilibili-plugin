@@ -6,9 +6,11 @@ import com.muedsa.tvbox.api.data.MediaDetail
 import com.muedsa.tvbox.api.store.IPluginPerfStore
 import com.muedsa.tvbox.bilibili.BILI_REFRESH_TOKEN_KEY
 import com.muedsa.tvbox.bilibili.BilibiliConst
+import com.muedsa.tvbox.bilibili.helper.BiliCookieHelper
 import com.muedsa.tvbox.bilibili.model.LoginState
 import com.muedsa.tvbox.bilibili.model.QRCodeLoginCache
 import com.muedsa.tvbox.tool.LenientJson
+import com.muedsa.tvbox.tool.SharedCookieSaver
 import com.muedsa.tvbox.tool.feignChrome
 import com.muedsa.tvbox.tool.get
 import com.muedsa.tvbox.tool.parseHtml
@@ -22,6 +24,7 @@ class ActionDelegate(
     private val passportService: BilibiliPassportService,
     private val okHttpClient: OkHttpClient,
     private val store: IPluginPerfStore,
+    private val cookieSaver: SharedCookieSaver,
 ) {
 
     suspend fun exec(action: String, data: String): MediaDetail {
@@ -35,7 +38,9 @@ class ActionDelegate(
                 checkQrCodeLogin(data = LenientJson.decodeFromString(data))
             }
 
-            ACTION_LOGOUT -> throw RuntimeException("你已登录")
+            ACTION_LOGOUT -> {
+                loginExist()
+            }
 
             ACTION_INVALID -> throw RuntimeException("这是一个动作卡片,请删除")
 
@@ -101,6 +106,19 @@ class ActionDelegate(
         }
     }
 
+    private suspend fun loginExist(): MediaDetail {
+        val biliCSRF = BiliCookieHelper.getCookeValue(
+            cookieSaver = cookieSaver,
+            cookieName = BiliCookieHelper.COOKIE_B_JCT
+        ) ?: throw RuntimeException("未登录")
+        val resp = passportService.loginExitV2(biliCSRF = biliCSRF)
+        if (resp.code == 0L) {
+            throw RuntimeException("登录已注销，请重新进入插件")
+        } else {
+            throw RuntimeException("注销失败，${resp.message}")
+        }
+    }
+
     companion object {
         const val ACTION_PREFIX = "action_"
         const val ACTION_INVALID = "${ACTION_PREFIX}invalid"
@@ -119,11 +137,11 @@ class ActionDelegate(
 
         val LOGIN_SUCCESS_MEDIA_DETAIL = MediaDetail(
             id = ACTION_QRCODE_LOGIN,
-            title = "登录成功,请返回首页",
+            title = "登录成功,请重新进入插件",
             detailUrl = ACTION_QRCODE_LOGIN,
             subTitle = null,
             backgroundImageUrl = "",
-            description = "登录成功,请返回首页",
+            description = "登录成功,请重新进入插件",
             playSourceList = listOf(),
             favoritedMediaCard = INVALID_ACTION_SAVED_MEDIA_CARD,
             disableEpisodeProgression = true,
@@ -133,7 +151,7 @@ class ActionDelegate(
             MediaCard(
                 id = ACTION_LOGOUT,
                 title = state.uname,
-                subTitle = "",
+                subTitle = "注销登录",
                 detailUrl = ACTION_LOGOUT,
                 coverImageUrl = state.face
             )

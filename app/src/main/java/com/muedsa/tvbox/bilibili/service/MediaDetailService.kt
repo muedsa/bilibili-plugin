@@ -54,6 +54,7 @@ class MediaDetailService(
         okHttpClient = okHttpClient,
         passportService = passportService,
         store = store,
+        cookieSaver = cookieSaver,
     )
 
     override suspend fun getDetailData(mediaId: String, detailUrl: String): MediaDetail {

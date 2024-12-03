@@ -1,11 +1,14 @@
 package com.muedsa.tvbox.bilibili.service
 
 import com.muedsa.tvbox.bilibili.model.bilibili.BiliResp
+import com.muedsa.tvbox.bilibili.model.bilibili.LoginExit
 import com.muedsa.tvbox.bilibili.model.bilibili.PassportCookieInfo
 import com.muedsa.tvbox.bilibili.model.bilibili.PassportQRCode
 import com.muedsa.tvbox.bilibili.model.bilibili.PassportQRCodePoll
 import com.muedsa.tvbox.bilibili.model.bilibili.PassportRefreshCookie
 import com.muedsa.tvbox.tool.ChromeUserAgent
+import retrofit2.http.Field
+import retrofit2.http.FormUrlEncoded
 import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.POST
@@ -45,4 +48,11 @@ interface BilibiliPassportService {
         @Query("refresh_token") refreshToken: String,
         @Header("User-Agent") userAgent: String = ChromeUserAgent,
     ) : BiliResp<Unit>
+
+    @FormUrlEncoded
+    @POST("login/exit/v2")
+    suspend fun loginExitV2(
+        @Field("biliCSRF") biliCSRF: String,
+        @Header("User-Agent") userAgent: String = ChromeUserAgent,
+    ) : BiliResp<LoginExit>
 }
