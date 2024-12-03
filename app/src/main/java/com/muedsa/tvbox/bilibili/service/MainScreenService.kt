@@ -5,6 +5,7 @@ import com.muedsa.tvbox.api.data.MediaCardRow
 import com.muedsa.tvbox.api.data.MediaCardType
 import com.muedsa.tvbox.api.service.IMainScreenService
 import com.muedsa.tvbox.api.store.IPluginPerfStore
+import com.muedsa.tvbox.bilibili.BILI_REFRESH_TOKEN_KEY
 import com.muedsa.tvbox.bilibili.BILI_WBI_IMG_KEY
 import com.muedsa.tvbox.bilibili.BILI_WBI_MIXIN_KEY
 import com.muedsa.tvbox.bilibili.BILI_WBI_SUB_KEY
@@ -22,6 +23,7 @@ import com.muedsa.tvbox.tool.SharedCookieSaver
 import com.muedsa.tvbox.tool.checkSuccess
 import com.muedsa.tvbox.tool.feignChrome
 import com.muedsa.tvbox.tool.get
+import com.muedsa.tvbox.tool.parseHtml
 import com.muedsa.tvbox.tool.toRequestBuild
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -418,11 +420,57 @@ class MainScreenService(
             loginState = LoginState.NotLogin
         }
 
-        // 检测是否需要刷新cookie 暂未实现
-//        if (loginState is LoginState.Logged) {
-//            BiliCookieHelper.getCookeValue(cookieSaver, "")
-//            passportService.cookieInfo()
-//        }
+        // 检测是否需要刷新cookie
+        if (loginState is LoginState.Logged) {
+            try {
+                val oldRefreshToken = store.get(BILI_REFRESH_TOKEN_KEY)
+                val oldCsrf = BiliCookieHelper.getCookeValue(
+                    cookieSaver = cookieSaver,
+                    cookieName = BiliCookieHelper.COOKIE_B_JCT
+                )
+                if (!oldRefreshToken.isNullOrEmpty() && !oldCsrf.isNullOrEmpty()) {
+                    val resp = passportService.cookieInfo(csrf = oldCsrf)
+                    if (resp.code == 0L && resp.data != null && resp.data.refresh) {
+                        // 需要刷新Cookie
+                        val body =
+                            "${BilibiliConst.REFRESH_CSRF_URL}${
+                                BiliCookieHelper.getCorrespondPath(
+                                    resp.data.timestamp
+                                )
+                            }"
+                                .toRequestBuild()
+                                .feignChrome()
+                                .get(okHttpClient = okHttpClient)
+                                .parseHtml()
+                                .body()
+                        body.selectFirst("#1-name")?.text()?.trim()?.let { refreshCsrf ->
+                            val resp = passportService.cookieRefresh(
+                                csrf = oldCsrf,
+                                refreshCsrf = refreshCsrf,
+                                source = "main_web",
+                                refreshToken = oldRefreshToken
+                            )
+                            if (resp.code == 0L && resp.data != null && resp.data.refreshToken.isNotEmpty()) {
+                                store.update(BILI_REFRESH_TOKEN_KEY, resp.data.refreshToken)
+                                BiliCookieHelper.getCookeValue(
+                                    cookieSaver = cookieSaver,
+                                    cookieName = BiliCookieHelper.COOKIE_B_JCT
+                                )?.let { newCsrf ->
+                                    passportService.confirmRefresh(
+                                        csrf = newCsrf,
+                                        refreshToken = oldRefreshToken
+                                    )
+                                }
+                            }
+                        }
+                    } else {
+                        Timber.d("no need to refresh cookie")
+                    }
+                }
+            } catch (throwable: Throwable) {
+                Timber.e(throwable, "refresh cookie error")
+            }
+        }
 
         // bili_ticket
         if (!BiliCookieHelper.existCookie(
