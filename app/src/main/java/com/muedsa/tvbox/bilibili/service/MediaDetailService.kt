@@ -301,11 +301,15 @@ class MediaDetailService(
                 add("❤ ${roomInfo.attention}")
                 add("${roomInfo.parentAreaName}/${roomInfo.areaName}")
                 if (roomInfo.liveTime.isNotBlank()) {
-                    add(roomInfo.liveTime)
+                    if (roomInfo.liveStatus == 1) {
+                        add("开播时间: ${roomInfo.liveTime}")
+                    } else {
+                        add("未开播")
+                    }
                 }
             }.joinToString(" | ") + "\n\n${roomInfo.description}",
             detailUrl = savedId,
-            backgroundImageUrl = roomInfo.keyframe,
+            backgroundImageUrl = if(roomInfo.keyframe.isNotBlank()) roomInfo.keyframe else roomInfo.userCover,
             playSourceList = createLiveRoomPlaySource(roomInfo = roomInfo),
             favoritedMediaCard = SavedMediaCard(
                 id = savedId,
