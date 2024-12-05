@@ -2,9 +2,11 @@ package com.muedsa.tvbox.bilibili.service
 
 import com.muedsa.tvbox.api.data.MediaCard
 import com.muedsa.tvbox.api.data.MediaCardRow
+import com.muedsa.tvbox.api.data.MediaCardType
 import com.muedsa.tvbox.api.data.MediaDetail
 import com.muedsa.tvbox.api.store.IPluginPerfStore
 import com.muedsa.tvbox.bilibili.BILI_REFRESH_TOKEN_KEY
+import com.muedsa.tvbox.bilibili.BILI_VIDEO_HEARTBEAT
 import com.muedsa.tvbox.bilibili.BilibiliConst
 import com.muedsa.tvbox.bilibili.helper.BiliCookieHelper
 import com.muedsa.tvbox.bilibili.model.LoginState
@@ -40,6 +42,13 @@ class ActionDelegate(
 
             ACTION_LOGOUT -> {
                 loginExist()
+            }
+
+            ACTION_VIDEO_HEARTBEAT -> {
+                val updateConfig = if (data.startsWith("$ACTION_VIDEO_HEARTBEAT:")) {
+                    data.removePrefix("$ACTION_VIDEO_HEARTBEAT:").toIntOrNull()
+                } else null
+                videoHeartbeat(updateConfig = updateConfig)
             }
 
             ACTION_INVALID -> throw RuntimeException("这是一个动作卡片,请删除")
@@ -119,12 +128,23 @@ class ActionDelegate(
         }
     }
 
+    private suspend fun videoHeartbeat(updateConfig: Int? = null): MediaDetail {
+        val config = if (updateConfig == 0 || updateConfig == 1 || updateConfig == 2) {
+            store.update(key = BILI_VIDEO_HEARTBEAT, value = updateConfig)
+            updateConfig
+        } else {
+            store.getOrDefault(key = BILI_VIDEO_HEARTBEAT, default = 0)
+        }
+        return createVideoHeartbeatMediaDetail(config)
+    }
+
     companion object {
         const val ACTION_PREFIX = "action_"
         const val ACTION_INVALID = "${ACTION_PREFIX}invalid"
         const val ACTION_QRCODE_LOGIN = "${ACTION_PREFIX}qrcode_login"
         const val ACTION_QRCODE_LOGIN_POLL = "${ACTION_PREFIX}qrcode_login_poll"
         const val ACTION_LOGOUT = "${ACTION_PREFIX}logout"
+        const val ACTION_VIDEO_HEARTBEAT = "${ACTION_PREFIX}_VIDEO_HEARTBEAT"
 
         val LOGIN_ACTION_CARD = MediaCard(
             id = ACTION_QRCODE_LOGIN,
@@ -196,5 +216,60 @@ class ActionDelegate(
                 disableEpisodeProgression = true,
             )
 
+        fun createVideoHeartbeatMediaDetail(config: Int): MediaDetail {
+            val subTitle = when (config) {
+                1 -> "已开启(上报开始播放)"
+                2 -> "已开启(上报播放完成)"
+                else -> "已关闭"
+            }
+            return MediaDetail(
+                id = ACTION_VIDEO_HEARTBEAT,
+                title = "播放进度上报",
+                detailUrl = ACTION_VIDEO_HEARTBEAT,
+                subTitle = subTitle,
+                backgroundImageUrl = "https://i0.hdslb.com/bfs/creative/23f832f985f4af14863a0a3d304f6fbfa0d61173.png@328w_185h.png",
+                description = "开启后会在点击视频播放按钮时上报给Bilibili，使Bilibili可以记录播放历史。\n" +
+                        "因为插件目前只能在点击按钮时上报一次（与实际播放与否、播放进度无关），所以目前只支持一次性上报播放进度为0(开始播放)或-1(播放完成)。",
+                playSourceList = listOf(),
+                favoritedMediaCard = INVALID_ACTION_SAVED_MEDIA_CARD,
+                disableEpisodeProgression = true,
+                rows = listOf(
+                    MediaCardRow(
+                        title = "登录动作",
+                        list = listOf(
+                            MediaCard(
+                                id = ACTION_VIDEO_HEARTBEAT,
+                                title = "${if (config == 0) "关闭" else "已关闭"}播放进度上报",
+                                detailUrl = "$ACTION_VIDEO_HEARTBEAT:0",
+                                backgroundColor = if (config == 0) 0xFF_05_B3_73 else 0x00_00_00_00,
+                            ),
+                            MediaCard(
+                                id = ACTION_VIDEO_HEARTBEAT,
+                                title = "${if (config == 1) "开启" else "已开启"}播放进度上报(开始播放)",
+                                detailUrl = "$ACTION_VIDEO_HEARTBEAT:1",
+                                backgroundColor = if (config == 1) 0xFF_05_B3_73 else 0x00_00_00_00,
+                            ),
+                            MediaCard(
+                                id = ACTION_VIDEO_HEARTBEAT,
+                                title = "${if (config == 2) "开启" else "已开启"}开启播放进度上报(播放完成)",
+                                detailUrl = "$ACTION_VIDEO_HEARTBEAT:2",
+                                backgroundColor = if (config == 2) 0xFF_05_B3_73 else 0x00_00_00_00,
+                            )
+                        ),
+                        cardWidth = 240,
+                        cardHeight = 60,
+                        cardType = MediaCardType.NOT_IMAGE
+                    )
+                )
+            )
+        }
+
+        val VIDEO_HEARTBEAT_ACTION_CARD = MediaCard(
+            id = ACTION_VIDEO_HEARTBEAT,
+            title = "视频进度上报",
+            subTitle = "设置视频进度上报",
+            detailUrl = ACTION_VIDEO_HEARTBEAT,
+            coverImageUrl = "https://i0.hdslb.com/bfs/creative/23f832f985f4af14863a0a3d304f6fbfa0d61173.png@328w_185h.png"
+        )
     }
 }

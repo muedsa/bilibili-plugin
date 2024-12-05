@@ -19,11 +19,15 @@ import com.muedsa.tvbox.bilibili.model.bilibili.TopFeed
 import com.muedsa.tvbox.bilibili.model.bilibili.VideoDetail
 import com.muedsa.tvbox.bilibili.model.bilibili.WebTicket
 import com.muedsa.tvbox.tool.ChromeUserAgent
+import retrofit2.http.Field
+import retrofit2.http.FormUrlEncoded
 import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.POST
 import retrofit2.http.Query
 import retrofit2.http.QueryMap
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 interface BilibiliApiService {
 
@@ -122,4 +126,35 @@ interface BilibiliApiService {
         @Header("Referer") referer: String = "https://www.bilibili.com/",
         @Header("User-Agent") userAgent: String = ChromeUserAgent,
     ) : BiliResp<HistoryToView>
+
+    @OptIn(ExperimentalUuidApi::class)
+    @FormUrlEncoded
+    @POST("x/click-interface/web/heartbeat")
+    suspend fun webHeartbeat(
+        @QueryMap params: Map<String, String>,
+        @Field("start_ts") startTs: Long,
+        @Field("mid") mid: Long,
+        @Field("aid") aid: Long,
+        @Field("cid") cid: Long,
+        @Field("played_time") playedTime: Long,
+        @Field("realtime") realTime: Long,
+        @Field("real_played_time") realPlayedTime: Long,
+        @Field("last_play_progress_time") lastPlayProgressTime: Long,
+        @Field("max_play_progress_time") maxPlayProgressTime: Long,
+        @Field("quality") quality: Int,
+        @Field("video_duration") videoDuration: Long,
+        @Field("type") type: Int = 3,
+        @Field("sub_type") subType: Int = 0,
+        @Field("play_type") playType: Int = 1,
+        @Field("dt") dt: Int = 2,
+        @Field("outer") outer: Int = 0,
+        @Field("spmid") spmId: String = "333.788.0.0",
+        @Field("from_spmid") fromSpmId: String = "333.788.drama_within_video.0",
+        @Field("refer_url") referUrl: String = "https://www.bilibili.com/?spm_id_from=333.788.0.0",
+        @Field("extra") extra: String = "{\"player_version\":\"4.9.8\"}",
+        @Field("session") session: String = Uuid.random().toString().replace("-", ""),
+        @Field("csrf") csrf: String,
+        @Header("Referer") referer: String = referUrl,
+        @Header("User-Agent") userAgent: String = ChromeUserAgent,
+    ): BiliResp<Unit>
 }

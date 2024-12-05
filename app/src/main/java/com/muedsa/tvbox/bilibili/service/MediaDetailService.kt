@@ -12,12 +12,14 @@ import com.muedsa.tvbox.api.data.MediaPlaySource
 import com.muedsa.tvbox.api.data.SavedMediaCard
 import com.muedsa.tvbox.api.service.IMediaDetailService
 import com.muedsa.tvbox.api.store.IPluginPerfStore
+import com.muedsa.tvbox.bilibili.BILI_VIDEO_HEARTBEAT
 import com.muedsa.tvbox.bilibili.BILI_WBI_MIXIN_KEY
 import com.muedsa.tvbox.bilibili.BilibiliConst
 import com.muedsa.tvbox.bilibili.helper.BiliApiHelper
 import com.muedsa.tvbox.bilibili.helper.BiliCookieHelper
 import com.muedsa.tvbox.bilibili.helper.WBIHelper.decodeURIComponent
 import com.muedsa.tvbox.bilibili.model.BiliVideoDetailUrlAttrs
+import com.muedsa.tvbox.bilibili.model.VideoHeartbeatInfo
 import com.muedsa.tvbox.bilibili.model.bilibili.BiliResp
 import com.muedsa.tvbox.bilibili.model.bilibili.LiveUserRoomInfo
 import com.muedsa.tvbox.bilibili.model.bilibili.PlayUrl
@@ -244,9 +246,18 @@ class MediaDetailService(
                 name = "$qualityName(${videoTrack.codecs})",
                 flag1 = ceil(resp.data.timeLength / 360000.0).toInt(),
                 flag3 = pageInfo.cid,
+                flag4 = info.aid,
                 flag5 = info.bvid,
                 flag6 = videoTrack.baseUrl,
-                flag7 =  resp.data.dash.audio.firstOrNull()?.baseUrl,
+                flag7 = resp.data.dash.audio.firstOrNull()?.baseUrl,
+                flag8 = LenientJson.encodeToString(
+                    VideoHeartbeatInfo(
+                        aid = info.aid,
+                        cid = info.cid,
+                        videoDuration = (resp.data.timeLength / 1000),
+                        quality = videoTrack.id
+                    )
+                )
             )
         }
     }
@@ -368,7 +379,7 @@ class MediaDetailService(
         val mixinKey = store.get(BILI_WBI_MIXIN_KEY)
             ?: throw RuntimeException("WBI鉴权参数未获取")
         val url =
-            "https://space.bilibili.com/$mid/video?tid=0&special_type=&pn=1&keyword=&order=pubdate"
+            "${BilibiliConst.SPACE_URL}/$mid/video?tid=0&special_type=&pn=1&keyword=&order=pubdate"
         val head = url.toRequestBuild()
             .feignChrome()
             .get(okHttpClient = okHttpClient)
@@ -467,7 +478,7 @@ class MediaDetailService(
         }
     }
 
-    private fun getVideoEpisodePlayInfo(episode: MediaEpisode): MediaHttpSource {
+    private suspend fun getVideoEpisodePlayInfo(episode: MediaEpisode): MediaHttpSource {
         val bvid =  episode.flag5?: throw RuntimeException("flag5 is empty")
         val videoUrl = episode.flag6?: throw RuntimeException("flag6 is empty")
         val audioUrl = episode.flag7
@@ -475,6 +486,54 @@ class MediaDetailService(
             "User-Agent" to ChromeUserAgent,
             "Referer" to "${BilibiliConst.MAIN_SITE_URL}/video/$bvid/?spm_id_from=333.1007.tianma.1-1-1.click",
         )
+        val csrf = BiliCookieHelper.getCookeValue(
+            cookieSaver = cookieSaver,
+            cookieName = BiliCookieHelper.COOKIE_B_JCT
+        )
+        val midStr = BiliCookieHelper.getCookeValue(
+            cookieSaver = cookieSaver,
+            cookieName = BiliCookieHelper.COOKIE_UID
+        )
+        if (csrf != null && midStr != null && episode.flag8 != null) {
+            val heartbeat = store.getOrDefault(BILI_VIDEO_HEARTBEAT, 0)
+            if (heartbeat == 1 || heartbeat == 2) {
+                val mid = midStr.toLong()
+                val startTs = System.currentTimeMillis() / 1000
+                val videoHeartbeatInfo =
+                    LenientJson.decodeFromString<VideoHeartbeatInfo>(episode.flag8!!)
+                val time = if (heartbeat == 1) 1 else videoHeartbeatInfo.videoDuration
+                val params = BiliApiHelper.buildWebHeartbeatParams(
+                    startTs = startTs,
+                    mid = mid,
+                    aid = videoHeartbeatInfo.aid,
+                    realTime = time,
+                    playedTime = time + 1,
+                    realPlayedTime = time + 1,
+                    videoDuration = videoHeartbeatInfo.videoDuration,
+                    lastPlayProgressTime = time,
+                    mixinKey = store.get(BILI_WBI_MIXIN_KEY)
+                        ?: throw RuntimeException("WBI鉴权参数未获取")
+                )
+                apiService.webHeartbeat(
+                    params = params,
+                    startTs = startTs,
+                    mid = mid,
+                    aid = videoHeartbeatInfo.aid,
+                    cid = videoHeartbeatInfo.cid,
+                    playedTime = time + 1,
+                    realTime = time,
+                    realPlayedTime = time + 1,
+                    lastPlayProgressTime = time,
+                    maxPlayProgressTime = time,
+                    quality = videoHeartbeatInfo.quality,
+                    videoDuration = videoHeartbeatInfo.videoDuration,
+                    type = videoHeartbeatInfo.type,
+                    subType = videoHeartbeatInfo.subType,
+                    playType = if (heartbeat == 1) 1 else -1,
+                    csrf = csrf,
+                )
+            }
+        }
         return if (audioUrl.isNullOrEmpty()) {
             MediaHttpSource(url = videoUrl, httpHeaders = headers)
         } else {

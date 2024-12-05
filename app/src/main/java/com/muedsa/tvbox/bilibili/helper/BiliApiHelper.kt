@@ -4,6 +4,9 @@ import kotlin.random.Random
 
 object BiliApiHelper {
 
+    const val DM_IMG_STR = "V2ViR0wgMS4wIChPcGVuR0wgRVMgMi4wIENocm9taXVtKQ"
+    const val DM_COVER_IMG_STR = "QU5HTEUgKEludGVsLCBJbnRlbChSKSBVSEQgR3JhcGhpY3MgNjMwICgweDAwMDA5QkM4KSBEaXJlY3QzRDExIHZzXzVfMCBwc181XzAsIEQzRDExKUdvb2dsZSBJbmMuIChJbnRlbC"
+
     fun generateFixedLengthRandomNumber(length: Int): String {
         val sb = StringBuilder()
         for (i in 1..length) {
@@ -141,9 +144,6 @@ object BiliApiHelper {
         return params
     }
 
-    const val DM_IMG_STR = "V2ViR0wgMS4wIChPcGVuR0wgRVMgMi4wIENocm9taXVtKQ"
-    const val DM_COVER_IMG_STR = "QU5HTEUgKEludGVsLCBJbnRlbChSKSBVSEQgR3JhcGhpY3MgNjMwICgweDAwMDA5QkM4KSBEaXJlY3QzRDExIHZzXzVfMCBwc181XzAsIEQzRDExKUdvb2dsZSBJbmMuIChJbnRlbC"
-
     fun buildDmWbiWebSegSoParams(
         oid: Long,
         segmentIndex: Int,
@@ -153,6 +153,34 @@ object BiliApiHelper {
             "type" to "1",
             "oid" to "$oid",
             "segment_index" to "$segmentIndex",
+        )
+        WBIHelper.fillWbiParams(params = params, mixinKey = mixinKey)
+        return params
+    }
+
+
+    fun buildWebHeartbeatParams(
+        startTs: Long,
+        mid: Long,
+        aid: Long,
+        realTime: Long,
+        playedTime: Long,
+        realPlayedTime: Long,
+        videoDuration: Long,
+        lastPlayProgressTime: Long,
+        mixinKey: String,
+    ): MutableMap<String, String> {
+        val params = mutableMapOf<String, String>(
+            "w_start_ts" to "$startTs",
+            "w_mid" to "$mid",
+            "w_aid" to "$aid",
+            "w_realtime" to "$realTime",
+            "w_playedtime" to "$playedTime",
+            "w_real_played_time" to "$realPlayedTime",
+            "w_video_duration" to "$videoDuration",
+            "w_last_play_progress_time" to "$lastPlayProgressTime",
+            "w_dt" to "2",
+            "web_location" to "1315873",
         )
         WBIHelper.fillWbiParams(params = params, mixinKey = mixinKey)
         return params

@@ -507,7 +507,10 @@ class MainScreenService(
             is LoginState.Logged -> {
                 MediaCardRow(
                     title = "个人信息",
-                    list = listOf(ActionDelegate.createLogoutCard(s)),
+                    list = listOf(
+                        ActionDelegate.createLogoutCard(s),
+                        ActionDelegate.VIDEO_HEARTBEAT_ACTION_CARD,
+                    ),
                     cardWidth = BilibiliConst.AVATAR_CARD_WIDTH,
                     cardHeight = BilibiliConst.AVATAR_CARD_HEIGHT,
                 )

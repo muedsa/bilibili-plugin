@@ -8,6 +8,7 @@ object BilibiliConst {
     const val PASSPORT_URL = "https://passport.bilibili.com"
     const val LIVE_API_URL = "https://api.live.bilibili.com"
     const val REFRESH_CSRF_URL = "https://www.bilibili.com/correspond/1/"
+    const val SPACE_URL = "https://space.bilibili.com"
 
     const val AV_CARD_WIDTH = 178
     const val AV_CARD_HEIGHT = 100
