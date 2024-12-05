@@ -130,7 +130,7 @@ class MediaDetailService(
                                 ).toJsonString(),
                                 title = it.title,
                                 subTitle = info.owner?.name ?: "",
-                                coverImageUrl = info.pic
+                                coverImageUrl = it.arc.pic,
                             )
                         },
                         cardWidth = BilibiliConst.AV_CARD_WIDTH,

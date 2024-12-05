@@ -12,7 +12,7 @@ data class UgcSeasonEpisode(
     val cid: Long = 0L,
     @SerialName("title") val title: String = "",
     // attribute
-    // arc
+    val arc: UgcSeasonEpisodeArchive = UgcSeasonEpisodeArchive(),
     // page
     val bvid: String = "",
     // pages
