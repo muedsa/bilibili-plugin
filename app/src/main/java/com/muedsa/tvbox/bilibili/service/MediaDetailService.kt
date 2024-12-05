@@ -139,6 +139,25 @@ class MediaDetailService(
                 )
             }
         }
+        if (info.owner?.mid != null && info.owner.mid > 0) {
+            val userSpaceId = "$MEDIA_ID_USER_SPACE_PREFIX${info.owner.mid}"
+            rows.add(
+                MediaCardRow(
+                    title = "其他",
+                    list = listOf(
+                        MediaCard(
+                            id = userSpaceId,
+                            title = "投稿视频",
+                            subTitle = info.owner.name,
+                            detailUrl = userSpaceId,
+                            coverImageUrl = info.owner.face
+                        )
+                    ),
+                    cardWidth = BilibiliConst.AVATAR_CARD_WIDTH,
+                    cardHeight = BilibiliConst.AVATAR_CARD_HEIGHT
+                )
+            )
+        }
         return MediaDetail(
             id = bvid,
             title = info.title,
@@ -174,27 +193,7 @@ class MediaDetailService(
                 cardWidth = BilibiliConst.AV_CARD_WIDTH,
                 cardHeight = BilibiliConst.AV_CARD_HEIGHT,
             ),
-            rows = buildList {
-                if (info.owner?.mid != null && info.owner.mid > 0) {
-                    val userSpaceId = "$MEDIA_ID_USER_SPACE_PREFIX${info.owner.mid}"
-                    add(
-                        MediaCardRow(
-                            title = "其他",
-                            list = listOf(
-                                MediaCard(
-                                    id = userSpaceId,
-                                    title = "投稿视频",
-                                    subTitle = info.owner.name,
-                                    detailUrl = userSpaceId,
-                                    coverImageUrl = info.owner.face
-                                )
-                            ),
-                            cardWidth = BilibiliConst.AVATAR_CARD_WIDTH,
-                            cardHeight = BilibiliConst.AVATAR_CARD_HEIGHT
-                        )
-                    )
-                }
-            },
+            rows = rows,
             enableCustomDanmakuList = true,
         )
     }
