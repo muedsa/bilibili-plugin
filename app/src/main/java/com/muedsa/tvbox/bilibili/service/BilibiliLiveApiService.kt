@@ -1,5 +1,6 @@
 package com.muedsa.tvbox.bilibili.service
 
+import com.muedsa.tvbox.bilibili.BilibiliConst
 import com.muedsa.tvbox.bilibili.model.bilibili.BiliResp
 import com.muedsa.tvbox.bilibili.model.bilibili.DanmakuInfo
 import com.muedsa.tvbox.bilibili.model.bilibili.LivePlayUrl
@@ -46,7 +47,7 @@ interface BilibiliLiveApiService {
         @Query("page_size") pageSize: Int = 9, // max 29
         @Query("ignoreRecord") ignoreRecord: Int = 1,
         @Query("hit_ab") hitAb: Boolean = true,
-        @Header("Referer") referer: String = "https://link.bilibili.com/p/center/index",
+        @Header("Referer") referer: String = "${BilibiliConst.LINK_URL}/p/center/index",
         @Header("User-Agent") userAgent: String = ChromeUserAgent,
     ): BiliResp<LiveUserFollowing>
 

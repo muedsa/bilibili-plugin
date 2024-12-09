@@ -83,6 +83,8 @@ class MediaDetailService(
     }
 
     private suspend fun videoDetail(bvid: String, page: Int = 1): MediaDetail {
+        val referer =
+            "${BilibiliConst.MAIN_SITE_URL}/video/${bvid}/?spm_id_from=333.1007.tianma.1-1-1.click"
         val resp = apiService.wbiView(bvid)
         if (resp.code != 0L || resp.data == null) {
             throw RuntimeException("查询稿件详情失败 ${resp.message}")
@@ -184,6 +186,28 @@ class MediaDetailService(
                     id = "bilibili",
                     name = "哔哩哔哩",
                     episodeList = getVideoEpisodeList(info = info, pageInfo = pageInfo)
+                        .toMutableList()
+                        .apply {
+                            addAll(
+                                index = if (isNotEmpty()) 1 else 0,
+                                listOf(
+                                    MediaEpisode(
+                                        id = "$EPISODE_ID_COIN_ADD_PREFIX${info.bvid}",
+                                        name = "投币+2 & 点赞",
+                                        flag1 = 2,
+                                        flag3 = info.aid,
+                                        flag5 = referer,
+                                    ),
+                                    MediaEpisode(
+                                        id = "$EPISODE_ID_COIN_ADD_PREFIX${info.bvid}",
+                                        name = "投币+1 & 点赞",
+                                        flag1 = 1,
+                                        flag3 = info.aid,
+                                        flag5 = referer,
+                                    )
+                                )
+                            )
+                        }
                 )
             ),
             favoritedMediaCard = SavedMediaCard(
@@ -424,7 +448,6 @@ class MediaDetailService(
         )
     }
 
-
     private suspend fun getUserSpaceVideoRow(
         mid: Long,
         wWebId: String,
@@ -478,6 +501,8 @@ class MediaDetailService(
             return getVideoEpisodePlayInfo(episode = episode)
         } else if (episode.id.startsWith(MEDIA_ID_LIVE_ROOM_PREFIX)) {
             return getLiveEpisodePlayInfo(episode = episode)
+        } else if (episode.id.startsWith(EPISODE_ID_COIN_ADD_PREFIX)) {
+            return coinAdd(episode = episode)
         } else {
             TODO("暂不支持的类型 ${episode.id}")
         }
@@ -550,6 +575,20 @@ class MediaDetailService(
         // val roomId = episode.id.removePrefix(MEDIA_ID_LIVE_ROOM_PREFIX)
         val url = episode.flag5 ?: throw RuntimeException("获取直播地址失败")
         return MediaHttpSource(url = url)
+    }
+
+    private suspend fun coinAdd(episode: MediaEpisode): MediaHttpSource {
+        val resp = apiService.coinAdd(
+            aid = episode.flag3 ?: throw RuntimeException("aid为空"),
+            multiply = episode.flag1 ?: 1,
+            referer = episode.flag5 ?: BilibiliConst.MAIN_SITE_URL,
+            csrf = BiliCookieHelper.getCookeValue(
+                cookieSaver = cookieSaver,
+                cookieName = BiliCookieHelper.COOKIE_B_JCT
+            ) ?: throw RuntimeException("未登录")
+        )
+        val message = if (resp.code != 0L) resp.message else "投币成功"
+        throw RuntimeException(message)
     }
 
     override suspend fun getEpisodeDanmakuDataList(episode: MediaEpisode): List<DanmakuData> {
@@ -633,6 +672,7 @@ class MediaDetailService(
         const val MEDIA_ID_BV_PREFIX = "BV"
         const val MEDIA_ID_LIVE_ROOM_PREFIX = "LIVE_ROOM:"
         const val MEDIA_ID_USER_SPACE_PREFIX = "USER_SPACE:"
+        const val EPISODE_ID_COIN_ADD_PREFIX = "COIN_ADD:"
         val V_VOUCHER_MEDIA_EPISODE_LIST = listOf(
             MediaEpisode(
                 id = " MEDIA_EPISODE_V_VOUCHER",

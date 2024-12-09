@@ -1,7 +1,9 @@
 package com.muedsa.tvbox.bilibili.service
 
+import com.muedsa.tvbox.bilibili.BilibiliConst
 import com.muedsa.tvbox.bilibili.helper.hmacSha256
 import com.muedsa.tvbox.bilibili.model.bilibili.BiliResp
+import com.muedsa.tvbox.bilibili.model.bilibili.CoinAdd
 import com.muedsa.tvbox.bilibili.model.bilibili.DataFlow
 import com.muedsa.tvbox.bilibili.model.bilibili.DynamicCard
 import com.muedsa.tvbox.bilibili.model.bilibili.FingerSpi
@@ -95,14 +97,14 @@ interface BilibiliApiService {
     @GET("x/web-interface/wbi/search/type")
     suspend fun wbiSearchType(
         @QueryMap params: Map<String, String>,
-        @Header("Referer") referer: String = "https://search.bilibili.com/",
+        @Header("Referer") referer: String = "${BilibiliConst.SEARCH_URL}/",
         @Header("User-Agent") userAgent: String = ChromeUserAgent,
     ) : BiliResp<SearchEsResult<SearchResult>>
 
     @GET("x/web-interface/popular")
     suspend fun popular(
         @QueryMap params: Map<String, String>,
-        @Header("Referer") referer: String = "https://www.bilibili.com/v/popular/all/?spm_id_from=333.1007.0.0",
+        @Header("Referer") referer: String = "${BilibiliConst.MAIN_SITE_URL}/v/popular/all/?spm_id_from=333.1007.0.0",
         @Header("User-Agent") userAgent: String = ChromeUserAgent,
     ) : BiliResp<PopularFlow>
 
@@ -123,7 +125,7 @@ interface BilibiliApiService {
     @GET("x/v2/history/toview/web")
     suspend fun historyToViewWeb(
         @Query("web_location") webLocation: String = "333.1007",
-        @Header("Referer") referer: String = "https://www.bilibili.com/",
+        @Header("Referer") referer: String = "${BilibiliConst.MAIN_SITE_URL}/",
         @Header("User-Agent") userAgent: String = ChromeUserAgent,
     ) : BiliResp<HistoryToView>
 
@@ -150,11 +152,27 @@ interface BilibiliApiService {
         @Field("outer") outer: Int = 0,
         @Field("spmid") spmId: String = "333.788.0.0",
         @Field("from_spmid") fromSpmId: String = "333.788.drama_within_video.0",
-        @Field("refer_url") referUrl: String = "https://www.bilibili.com/?spm_id_from=333.788.0.0",
+        @Field("refer_url") referUrl: String = "${BilibiliConst.MAIN_SITE_URL}/?spm_id_from=333.788.0.0",
         @Field("extra") extra: String = "{\"player_version\":\"4.9.8\"}",
         @Field("session") session: String = Uuid.random().toString().replace("-", ""),
         @Field("csrf") csrf: String,
         @Header("Referer") referer: String = referUrl,
         @Header("User-Agent") userAgent: String = ChromeUserAgent,
     ): BiliResp<Unit>
+
+
+    @POST("x/web-interface/coin/add")
+    suspend fun coinAdd(
+        @Query("aid") aid: Long,
+        @Query("multiply") multiply: Int = 2,
+        @Query("select_like") selectLike: Int = 1,
+        @Query("cross_domain") crossDomain: Boolean = true,
+        @Query("eab_x") eabX: Int = 1,
+        @Query("ramval") ramval: Int = 1,
+        @Query("source") source: String = "web_normal",
+        @Query("ga") ga: Int = 1,
+        @Query("csrf") csrf: String,
+        @Header("Referer") referer: String,
+        @Header("User-Agent") userAgent: String = ChromeUserAgent,
+    ): BiliResp<CoinAdd>
 }
