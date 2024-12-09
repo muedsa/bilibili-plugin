@@ -43,6 +43,7 @@ object BiliApiHelper {
     }
 
     fun buildWbiPlayUrlParams(
+        aid: Long,
         bvid: String,
         cid: Long,
         qn: Int = 127,
@@ -51,6 +52,7 @@ object BiliApiHelper {
         mixinKey: String,
     ):  MutableMap<String, String> {
         val params = mutableMapOf<String, String>(
+            "aid" to "$aid",
             "bvid" to bvid,
             "cid" to "$cid",
             "qn" to "$qn",
@@ -64,6 +66,11 @@ object BiliApiHelper {
             "isGaiaAvoided" to "false",
             "voice_balance" to "1",
             "web_location" to "1315873",
+            "try_look" to "1",
+            "dm_img_list" to "[{\"x\":2498,\"y\":-1806,\"z\":0,\"timestamp\":3023,\"k\":74,\"type\":0},{\"x\":2612,\"y\":-1686,\"z\":96,\"timestamp\":3524,\"k\":66,\"type\":0},{\"x\":2670,\"y\":-1629,\"z\":65,\"timestamp\":3624,\"k\":80,\"type\":0},{\"x\":2796,\"y\":-1669,\"z\":45,\"timestamp\":3724,\"k\":67,\"type\":0},{\"x\":3015,\"y\":-1661,\"z\":69,\"timestamp\":3824,\"k\":102,\"type\":0},{\"x\":3006,\"y\":-1682,\"z\":50,\"timestamp\":3956,\"k\":69,\"type\":0},{\"x\":4156,\"y\":396,\"z\":141,\"timestamp\":4396,\"k\":95,\"type\":0},{\"x\":5228,\"y\":2393,\"z\":600,\"timestamp\":4497,\"k\":94,\"type\":0},{\"x\":5502,\"y\":2715,\"z\":822,\"timestamp\":4602,\"k\":82,\"type\":0},{\"x\":4887,\"y\":1662,\"z\":279,\"timestamp\":4702,\"k\":97,\"type\":0},{\"x\":4841,\"y\":981,\"z\":735,\"timestamp\":4803,\"k\":116,\"type\":0},{\"x\":4063,\"y\":-292,\"z\":499,\"timestamp\":4904,\"k\":84,\"type\":0},{\"x\":3934,\"y\":-163,\"z\":332,\"timestamp\":5004,\"k\":95,\"type\":0},{\"x\":5424,\"y\":3021,\"z\":1271,\"timestamp\":5104,\"k\":117,\"type\":0},{\"x\":4799,\"y\":2347,\"z\":632,\"timestamp\":5206,\"k\":71,\"type\":0},{\"x\":4952,\"y\":2035,\"z\":1214,\"timestamp\":5307,\"k\":88,\"type\":0},{\"x\":3553,\"y\":113,\"z\":418,\"timestamp\":5409,\"k\":65,\"type\":0},{\"x\":4054,\"y\":-328,\"z\":893,\"timestamp\":5509,\"k\":122,\"type\":0},{\"x\":4342,\"y\":-881,\"z\":1151,\"timestamp\":5610,\"k\":117,\"type\":0},{\"x\":4442,\"y\":-884,\"z\":1192,\"timestamp\":5711,\"k\":89,\"type\":0},{\"x\":5107,\"y\":4214,\"z\":1116,\"timestamp\":5812,\"k\":96,\"type\":0},{\"x\":3987,\"y\":5186,\"z\":114,\"timestamp\":5916,\"k\":107,\"type\":0},{\"x\":4001,\"y\":4234,\"z\":1347,\"timestamp\":10574,\"k\":113,\"type\":0},{\"x\":5476,\"y\":-83,\"z\":1453,\"timestamp\":10748,\"k\":99,\"type\":0},{\"x\":6035,\"y\":374,\"z\":1950,\"timestamp\":10902,\"k\":69,\"type\":0},{\"x\":4512,\"y\":-1414,\"z\":1199,\"timestamp\":15540,\"k\":85,\"type\":0},{\"x\":6160,\"y\":590,\"z\":2653,\"timestamp\":15640,\"k\":110,\"type\":0},{\"x\":3691,\"y\":-1870,\"z\":180,\"timestamp\":15744,\"k\":89,\"type\":0},{\"x\":5649,\"y\":116,\"z\":2123,\"timestamp\":16076,\"k\":71,\"type\":0},{\"x\":7950,\"y\":5435,\"z\":2730,\"timestamp\":16176,\"k\":101,\"type\":0},{\"x\":8023,\"y\":5708,\"z\":2387,\"timestamp\":16277,\"k\":87,\"type\":0},{\"x\":7009,\"y\":4212,\"z\":1439,\"timestamp\":16378,\"k\":69,\"type\":0},{\"x\":8157,\"y\":5334,\"z\":2596,\"timestamp\":16480,\"k\":86,\"type\":0},{\"x\":9229,\"y\":6406,\"z\":3668,\"timestamp\":16678,\"k\":70,\"type\":1}]",
+            "dm_img_str" to DM_IMG_STR,
+            "dm_cover_img_str" to DM_COVER_IMG_STR,
+            "dm_img_inter" to "{\"ds\":[{\"t\":2,\"c\":\"dGl0bGUtdH\",\"p\":[3997,43,1139],\"s\":[198,1196,1520]}],\"wh\":[5921,6842,81],\"of\":[189,378,189]}",
             "session" to session,
         )
         WBIHelper.fillWbiParams(params = params, mixinKey = mixinKey)

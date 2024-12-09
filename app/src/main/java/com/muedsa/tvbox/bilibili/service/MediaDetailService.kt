@@ -208,13 +208,14 @@ class MediaDetailService(
             .parseHtml()
             .head()
         val playUrlJson = PLAY_URL_REGEX.find(head.html())?.groups[1]?.value
-        Timber.d("playUrl=$playUrlJson")
+        Timber.d("playUrlFromHtml=$playUrlJson")
         if (playUrlJson.isNullOrEmpty()) {
             // 尝试从SSR页面获取失败, 从接口请求获取
             val b3 = BiliCookieHelper.getCookeValue(cookieSaver = cookieSaver, cookieName = BiliCookieHelper.COOKIE_B_3)
             val session = "$b3${System.currentTimeMillis()}".md5().toHexString()
             resp = apiService.wbiPlayUrl(
                 BiliApiHelper.buildWbiPlayUrlParams(
+                    aid = info.aid,
                     bvid = info.bvid,
                     cid = pageInfo.cid,
                     session = session,

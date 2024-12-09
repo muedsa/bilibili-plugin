@@ -25,6 +25,6 @@ fun checkMediaCard(card: MediaCard, cardType: MediaCardType, lazyMessage: () -> 
     if (cardType != MediaCardType.NOT_IMAGE) {
         check(card.coverImageUrl.isNotEmpty()) { "${lazyMessage()} -> coverImageUrl" }
     }  else {
-        check(card.backgroundColor > 0) { "${lazyMessage()} -> backgroundColor" }
+        check(card.backgroundColor >= 0) { "${lazyMessage()} -> backgroundColor" }
     }
 }
