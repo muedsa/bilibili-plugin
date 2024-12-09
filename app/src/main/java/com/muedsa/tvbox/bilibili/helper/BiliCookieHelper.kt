@@ -53,7 +53,7 @@ object BiliCookieHelper {
         secure: Boolean = false,
         httpOnly: Boolean = false,
         persistent: Boolean = true,
-        hostOnly: Boolean = true,
+        hostOnly: Boolean = false,
     ) : SerializableCookie = SerializableCookie(
         name = name,
         value = value,
