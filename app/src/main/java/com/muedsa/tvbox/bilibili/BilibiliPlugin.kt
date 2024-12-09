@@ -85,6 +85,7 @@ class BilibiliPlugin(tvBoxContext: TvBoxContext) : IPlugin(tvBoxContext = tvBoxC
             apiService = bilibiliApiService,
             liveApiService = bilibiliLiveApiService,
             apiGrpcService = bilibiliApiGrpcService,
+            debug = tvBoxContext.debug
         )
     }
     private val mediaSearchService by lazy {

@@ -30,9 +30,11 @@ import kotlin.time.Duration.Companion.seconds
 class LiveDanmakuDataFlow(
     private val uid: Long,
     private val roomId: Long,
+    private val b3: String,
     private val token: String,
     private val request: Request,
     okHttpClient: OkHttpClient,
+    val debug: Boolean = false,
 ) : DanmakuDataFlow {
 
     override val flow = MutableSharedFlow<DanmakuData>()
@@ -42,7 +44,14 @@ class LiveDanmakuDataFlow(
     private val listener = object : WebSocketListener() {
         override fun onOpen(webSocket: WebSocket, response: Response) {
             val joinRoomJson =
-                String.format(Locale.CHINA, LiveChatPacketUtil.ROOM_AUTH_JSON, uid, roomId, token)
+                String.format(
+                    Locale.CHINA,
+                    LiveChatPacketUtil.ROOM_AUTH_JSON,
+                    uid,
+                    roomId,
+                    b3,
+                    token
+                )
             webSocket.send(
                 LiveChatPacketUtil.encode(joinRoomJson, 1, LiveChatPacketUtil.OPERATION_AUTH)
                     .toByteString()
@@ -52,53 +61,118 @@ class LiveDanmakuDataFlow(
         }
 
         override fun onMessage(webSocket: WebSocket, bytes: ByteString) {
-            val byteBuffer = bytes.asByteBuffer()
-            val msgList = LiveChatPacketUtil.decode(byteBuffer)
-            msgList.forEach { msg ->
-                val jsonElement = LenientJson.parseToJsonElement(msg)
-                val cmd = jsonElement.jsonObject["cmd"]?.jsonPrimitive?.content
-                when (cmd) {
-                    CMD_DANMU_MSG -> {
-                        // Timber.d(jsonElement.toString())
-                        val infoJsonArr = jsonElement.jsonObject["info"]?.jsonArray
-                        if (!infoJsonArr.isNullOrEmpty()) {
-                            val propertyJsonArr = infoJsonArr[0].jsonArray
-                            val mode = propertyJsonArr[1].jsonPrimitive.int
-                            val textColor =
-                                (propertyJsonArr[3].jsonPrimitive.long xor 0x00000000ff000000L).toInt()
-                            val text = infoJsonArr[1].jsonPrimitive.content
-                            val m: Int? = when (mode) {
-                                1, 2, 3 -> 1
-                                4 -> 4
-                                5 -> 5
-                                else -> null
-                            }
-                            m?.let {
-                                coroutineScope.launch {
-                                    flow.emit(
-                                        DanmakuData(
-                                            danmakuId = Random.nextLong(),
-                                            position = -1,
-                                            content = text,
-                                            textColor = textColor,
-                                            mode = it,
-                                        )
-                                    )
+            coroutineScope.launch {
+                try {
+                    val byteBuffer = bytes.asByteBuffer()
+                    val packet = LiveChatPacketUtil.decode(byteBuffer)
+
+                    when (packet.protocolVersion) {
+                        LiveChatPacketUtil.PROTOCOL_JSON -> {
+                            when (packet.operation) {
+                                LiveChatPacketUtil.OPERATION_CMD -> {
+                                    val cmdMsgList =
+                                        LiveChatPacketUtil.decodeCMD(payload = packet.payload)
+                                    cmdMsgList.forEach { cmdMsg ->
+                                        if (debug) {
+                                            Timber.i("cmdMsg = $cmdMsg")
+                                        }
+                                        val jsonElement = LenientJson.parseToJsonElement(cmdMsg)
+                                        var cmd =
+                                            jsonElement.jsonObject["cmd"]?.jsonPrimitive?.content
+                                        if (cmd?.contains(":") == true) {
+                                            cmd = cmd.split(":")[0]
+                                        }
+                                        when (cmd) {
+                                            CMD_DANMU_MSG -> {
+                                                val infoJsonArr =
+                                                    jsonElement.jsonObject["info"]?.jsonArray
+                                                if (!infoJsonArr.isNullOrEmpty()) {
+                                                    val propertyJsonArr = infoJsonArr[0].jsonArray
+                                                    val mode = propertyJsonArr[1].jsonPrimitive.int
+                                                    val textColor =
+                                                        (propertyJsonArr[3].jsonPrimitive.long xor 0x00000000ff000000L).toInt()
+                                                    val text = infoJsonArr[1].jsonPrimitive.content
+                                                    val m: Int? = when (mode) {
+                                                        1, 2, 3 -> 1
+                                                        4 -> 4
+                                                        5 -> 5
+                                                        else -> null
+                                                    }
+                                                    m?.let {
+                                                        coroutineScope.launch {
+                                                            flow.emit(
+                                                                DanmakuData(
+                                                                    danmakuId = Random.nextLong(),
+                                                                    position = -1,
+                                                                    content = text,
+                                                                    textColor = textColor,
+                                                                    mode = it,
+                                                                )
+                                                            )
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+
+                                else -> {
+                                    if (debug) {
+                                        Timber.i("$packet")
+                                    }
                                 }
                             }
                         }
+
+                        LiveChatPacketUtil.PROTOCOL_INT32 -> {
+                            when (packet.operation) {
+                                LiveChatPacketUtil.OPERATION_AUTH_REPLY -> {}
+                                else -> {
+                                    if (debug) {
+                                        Timber.i("$packet")
+                                    }
+                                }
+                            }
+                        }
+
+                        else -> {
+                            if (debug) {
+                                Timber.i("$packet")
+                            }
+                        }
                     }
+                } catch (throwable: Throwable) {
+                    Timber.e(throwable, "$bytes")
                 }
             }
         }
 
         override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
             Timber.e(t, response?.message)
+            flow.tryEmit(
+                DanmakuData(
+                    danmakuId = Random.nextLong(),
+                    position = -1,
+                    content = "弹幕流意外断开, ${t.message}",
+                    textColor = 0xFF_00_00,
+                    mode = 4,
+                )
+            )
         }
 
         override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
             closed = true
             Timber.d("live room $roomId WebSocket closed")
+            flow.tryEmit(
+                DanmakuData(
+                    danmakuId = Random.nextLong(),
+                    position = -1,
+                    content = "弹幕流断开",
+                    textColor = 0xFF_00_00,
+                    mode = 4,
+                )
+            )
         }
     }
 
@@ -108,9 +182,9 @@ class LiveDanmakuDataFlow(
 
     fun loop() {
         coroutineScope.launch {
-            delay(30.seconds)
             while (!closed) {
                 webSocket.send(bytes = LiveChatPacketUtil.HEART_PACKET)
+                delay(HEARTBEAT_DELAY)
             }
         }
     }
@@ -122,4 +196,9 @@ class LiveDanmakuDataFlow(
             closed = true
         }
     }
+
+    companion object {
+        val HEARTBEAT_DELAY = 30.seconds
+    }
+
 }

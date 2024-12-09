@@ -52,6 +52,7 @@ class MediaDetailService(
     private val apiService: BilibiliApiService,
     private val liveApiService: BilibiliLiveApiService,
     private val apiGrpcService: BilibiliApiGrpcService,
+    private val debug: Boolean = false,
 ) : IMediaDetailService {
 
     private val actionDelegate = ActionDelegate(
@@ -611,12 +612,18 @@ class MediaDetailService(
                         defaultValue = "0",
                     )!!.toLong(),
                     roomId = roomId,
+                    b3 = BiliCookieHelper.getCookeValue(
+                        cookieSaver = cookieSaver,
+                        cookieName = BiliCookieHelper.COOKIE_B_3,
+                        defaultValue = "",
+                    )!!,
                     token = resp.data.token,
                     request = "wss://${hostInfo.host}:${hostInfo.wssPort}/sub"
                         .toRequestBuild()
                         .header("User-Agent", ChromeUserAgent)
                         .build(),
-                    okHttpClient = okHttpClient
+                    okHttpClient = okHttpClient,
+                    debug = debug,
                 )
             }
         } else null
