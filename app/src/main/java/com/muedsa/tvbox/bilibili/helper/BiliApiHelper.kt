@@ -47,7 +47,7 @@ object BiliApiHelper {
         bvid: String,
         cid: Long,
         qn: Int = 127,
-        fnval: Int = 4080,
+        fnval: Int = 2048,
         session: String,
         mixinKey: String,
     ):  MutableMap<String, String> {

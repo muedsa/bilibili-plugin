@@ -263,27 +263,55 @@ class MediaDetailService(
         if (!resp.data.vVoucher.isNullOrEmpty()) {
             return V_VOUCHER_MEDIA_EPISODE_LIST
         }
-        return resp.data.dash.video.map { videoTrack ->
+        return if (resp.data.dash != null) {
+            resp.data.dash.video.map { videoTrack ->
+                val qualityName =
+                    resp.data.supportFormat.find { it.quality == videoTrack.id }?.newDescription
+                        ?: "??"
+                MediaEpisode(
+                    id = "${info.bvid}_${pageInfo.cid}",
+                    name = "$qualityName(${videoTrack.codecs})",
+                    flag1 = ceil(resp.data.timeLength / 360000.0).toInt(),
+                    flag3 = pageInfo.cid,
+                    flag4 = info.aid,
+                    flag5 = info.bvid,
+                    flag6 = videoTrack.baseUrl,
+                    flag7 = resp.data.dash.audio.firstOrNull()?.baseUrl,
+                    flag8 = LenientJson.encodeToString(
+                        VideoHeartbeatInfo(
+                            aid = info.aid,
+                            cid = info.cid,
+                            videoDuration = (resp.data.timeLength / 1000),
+                            quality = videoTrack.id
+                        )
+                    )
+                )
+            }
+        } else if (!resp.data.durl.isNullOrEmpty()) {
             val qualityName =
-                resp.data.supportFormat.find { it.quality == videoTrack.id }?.newDescription ?: "??"
-            MediaEpisode(
-                id = "${info.bvid}_${pageInfo.cid}",
-                name = "$qualityName(${videoTrack.codecs})",
-                flag1 = ceil(resp.data.timeLength / 360000.0).toInt(),
-                flag3 = pageInfo.cid,
-                flag4 = info.aid,
-                flag5 = info.bvid,
-                flag6 = videoTrack.baseUrl,
-                flag7 = resp.data.dash.audio.firstOrNull()?.baseUrl,
-                flag8 = LenientJson.encodeToString(
-                    VideoHeartbeatInfo(
-                        aid = info.aid,
-                        cid = info.cid,
-                        videoDuration = (resp.data.timeLength / 1000),
-                        quality = videoTrack.id
+                resp.data.supportFormat.find { it.quality == resp.data.quality }?.newDescription
+                    ?: "??"
+            listOf(
+                MediaEpisode(
+                    id = "${info.bvid}_${pageInfo.cid}",
+                    name = qualityName,
+                    flag1 = ceil(resp.data.timeLength / 360000.0).toInt(),
+                    flag3 = pageInfo.cid,
+                    flag4 = info.aid,
+                    flag5 = info.bvid,
+                    flag6 = resp.data.durl.first().url,
+                    flag8 = LenientJson.encodeToString(
+                        VideoHeartbeatInfo(
+                            aid = info.aid,
+                            cid = info.cid,
+                            videoDuration = (resp.data.timeLength / 1000),
+                            quality = resp.data.quality
+                        )
                     )
                 )
             )
+        } else {
+            V_VOUCHER_MEDIA_EPISODE_LIST
         }
     }
 

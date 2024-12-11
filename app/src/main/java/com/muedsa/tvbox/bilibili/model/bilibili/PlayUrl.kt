@@ -17,7 +17,8 @@ data class PlayUrl(
     @SerialName("video_codecid") val videoCodecId: Int = 0,
     @SerialName("seek_param") val seekParam: String = "",
     @SerialName("seek_type") val seekType: String = "",
-    val dash: PlayUrlDash = PlayUrlDash(),
+    val dash: PlayUrlDash? = null,
+    val durl: List<PlayUrlDurl>? = null,
     @SerialName("support_formats") val supportFormat: List<PlayUrlSupportFormat> = emptyList(),
     // high_format
     @SerialName("last_play_time") val lastPlayTime: Long = 0L,

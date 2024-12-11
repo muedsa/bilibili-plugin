@@ -38,6 +38,7 @@ class BilibiliApiServiceTest {
                 aid = aid,
                 bvid = bv,
                 cid = cid,
+                fnval = 1024,
                 session = session,
                 mixinKey = TestPluginPrefStore.get(BILI_WBI_MIXIN_KEY)
                     ?: throw RuntimeException("WBI鉴权参数未获取")
