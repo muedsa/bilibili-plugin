@@ -2,7 +2,7 @@ package com.muedsa.tvbox.bilibili.service
 
 import com.muedsa.tvbox.api.data.DanmakuData
 import com.muedsa.tvbox.api.data.DanmakuDataFlow
-import com.muedsa.tvbox.bilibili.BilibiliConst.CMD_DANMU_MSG
+import com.muedsa.tvbox.bilibili.BilibiliConst
 import com.muedsa.tvbox.bilibili.helper.LiveChatPacketUtil
 import com.muedsa.tvbox.tool.LenientJson
 import kotlinx.coroutines.CoroutineScope
@@ -27,6 +27,7 @@ import java.util.Locale
 import kotlin.random.Random
 import kotlin.time.Duration.Companion.seconds
 
+@OptIn(ExperimentalStdlibApi::class)
 class LiveDanmakuDataFlow(
     private val uid: Long,
     private val roomId: Long,
@@ -40,6 +41,8 @@ class LiveDanmakuDataFlow(
     override val flow = MutableSharedFlow<DanmakuData>()
 
     private val coroutineScope = CoroutineScope(Dispatchers.IO)
+
+    private val combineDanmakuNumCache = mutableMapOf<Long, Int>()
 
     private val listener = object : WebSocketListener() {
         override fun onOpen(webSocket: WebSocket, response: Response) {
@@ -65,7 +68,6 @@ class LiveDanmakuDataFlow(
                 try {
                     val byteBuffer = bytes.asByteBuffer()
                     val packet = LiveChatPacketUtil.decode(byteBuffer)
-
                     when (packet.protocolVersion) {
                         LiveChatPacketUtil.PROTOCOL_JSON -> {
                             when (packet.operation) {
@@ -82,15 +84,16 @@ class LiveDanmakuDataFlow(
                                         if (cmd?.contains(":") == true) {
                                             cmd = cmd.split(":")[0]
                                         }
-                                        when (cmd) {
-                                            CMD_DANMU_MSG -> {
+                                        val danmakuList: List<DanmakuData>? = when (cmd) {
+                                            BilibiliConst.CMD_DANMU_MSG -> {
                                                 val infoJsonArr =
                                                     jsonElement.jsonObject["info"]?.jsonArray
                                                 if (!infoJsonArr.isNullOrEmpty()) {
                                                     val propertyJsonArr = infoJsonArr[0].jsonArray
                                                     val mode = propertyJsonArr[1].jsonPrimitive.int
                                                     val textColor =
-                                                        (propertyJsonArr[3].jsonPrimitive.long xor 0x00000000ff000000L).toInt()
+                                                        (propertyJsonArr[3].jsonPrimitive.long
+                                                                xor 0x00000000ff000000L).toInt()
                                                     val text = infoJsonArr[1].jsonPrimitive.content
                                                     val m: Int? = when (mode) {
                                                         1, 2, 3 -> 1
@@ -99,24 +102,109 @@ class LiveDanmakuDataFlow(
                                                         else -> null
                                                     }
                                                     m?.let {
-                                                        coroutineScope.launch {
-                                                            flow.emit(
-                                                                DanmakuData(
-                                                                    danmakuId = Random.nextLong(),
-                                                                    position = -1,
-                                                                    content = text,
-                                                                    textColor = textColor,
-                                                                    mode = it,
-                                                                )
+                                                        listOf(
+                                                            DanmakuData(
+                                                                danmakuId = Random.nextLong(),
+                                                                position = -1,
+                                                                content = text,
+                                                                textColor = textColor,
+                                                                mode = it,
                                                             )
-                                                        }
+                                                        )
                                                     }
+                                                } else null
+                                            }
+
+                                            BilibiliConst.CMD_SUPER_CHAT_MESSAGE -> {
+                                                val dataJsonObject =
+                                                    jsonElement.jsonObject["data"]?.jsonObject
+                                                if (!dataJsonObject.isNullOrEmpty()) {
+                                                    val price =
+                                                        dataJsonObject["price"]!!.jsonPrimitive
+                                                            .content
+                                                    val message =
+                                                        dataJsonObject["message"]!!.jsonPrimitive
+                                                            .content
+                                                    val messageFontColor =
+                                                        dataJsonObject["message_font_color"]!!
+                                                            .jsonPrimitive
+                                                            .content
+                                                            .removePrefix("#")
+                                                            .hexToInt()
+                                                    listOf(
+                                                        DanmakuData(
+                                                            danmakuId = dataJsonObject["id"]!!
+                                                                .jsonPrimitive
+                                                                .long,
+                                                            position = -1,
+                                                            content = "[SC-$price￥]$message",
+                                                            textColor = messageFontColor,
+                                                            mode = 4,
+                                                        )
+                                                    )
+                                                }
+                                                null
+                                            }
+
+                                            BilibiliConst.CMD_DM_INTERACTION -> {
+                                                val type = jsonElement.jsonObject["data"]!!
+                                                    .jsonObject["type"]!!
+                                                    .jsonPrimitive
+                                                    .int
+                                                val jsonObject = LenientJson.parseToJsonElement(
+                                                    jsonElement.jsonObject["data"]!!
+                                                        .jsonObject["data"]!!
+                                                        .jsonPrimitive
+                                                        .content
+                                                ).jsonObject
+                                                when (type) {
+                                                    102 -> {
+                                                        if (jsonObject.containsKey("combo")) {
+                                                            jsonObject["combo"]!!.jsonArray.map {
+                                                                val id =
+                                                                    it.jsonObject["id"]!!.jsonPrimitive.long
+                                                                val sendCnt =
+                                                                    combineDanmakuNumCache[id] ?: 0
+                                                                val cnt =
+                                                                    it.jsonObject["cnt"]!!.jsonPrimitive.int
+                                                                if (cnt > sendCnt) {
+                                                                    combineDanmakuNumCache[id] = cnt
+                                                                    buildList {
+                                                                        for (i in 0 until (cnt - sendCnt)) {
+                                                                            add(
+                                                                                DanmakuData(
+                                                                                    danmakuId = Random.nextLong(),
+                                                                                    position = -1,
+                                                                                    content = it.jsonObject["content"]!!
+                                                                                        .jsonPrimitive
+                                                                                        .content,
+                                                                                    mode = 1
+                                                                                )
+                                                                            )
+                                                                        }
+                                                                    }
+                                                                } else emptyList<DanmakuData>()
+                                                            }.flatMap { it }
+                                                        } else null
+                                                    }
+
+                                                    else -> null
+                                                }
+                                            }
+
+                                            else -> null
+                                        }
+                                        danmakuList?.let {
+                                            it.forEach { m ->
+                                                coroutineScope.launch {
+                                                    flow.emit(
+                                                        m
+                                                    )
                                                 }
                                             }
                                         }
                                     }
                                 }
-
                                 else -> {
                                     if (debug) {
                                         Timber.i("$packet")
