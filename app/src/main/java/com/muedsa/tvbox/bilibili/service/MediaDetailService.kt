@@ -369,7 +369,8 @@ class MediaDetailService(
             playSourceList = createLiveRoomPlaySource(roomInfo = roomInfo),
             favoritedMediaCard = SavedMediaCard(
                 id = savedId,
-                title = liveUserRoomInfo.info.uname,
+                title = roomInfo.title,
+                subTitle = "[直播]${liveUserRoomInfo.info.uname}",
                 detailUrl = savedId,
                 coverImageUrl = if (roomInfo.userCover.isNotBlank()) roomInfo.userCover else roomInfo.keyframe,
                 cardWidth = BilibiliConst.AV_CARD_WIDTH,

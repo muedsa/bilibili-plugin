@@ -67,7 +67,7 @@ class MediaSearchService(
                         MediaCard(
                             id = "${MediaDetailService.MEDIA_ID_LIVE_ROOM_PREFIX}${it.roomid}",
                             detailUrl = "${MediaDetailService.MEDIA_ID_LIVE_ROOM_PREFIX}${it.roomid}",
-                            title = SearchResult.removeHitHighlight(it.uname),
+                            title = "[直播]${SearchResult.removeHitHighlight(it.uname)}",
                             subTitle = if (it.isLive) "直播中" else "未开播",
                             coverImageUrl = SearchResult.appendProtocol(it.uface)
                         )
