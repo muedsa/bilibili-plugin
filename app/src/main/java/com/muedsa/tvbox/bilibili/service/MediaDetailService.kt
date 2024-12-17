@@ -404,7 +404,7 @@ class MediaDetailService(
                 platform = "android",
                 quality = 4,
             )
-            if (resp.code == 0L && resp.data != null) {
+            if (resp.code == 0L && resp.data?.durl != null) {
                 listOf(
                     MediaPlaySource(
                         id = "bilibili_live",
@@ -424,12 +424,12 @@ class MediaDetailService(
                     MediaPlaySource(
                         id = "bilibili_live",
                         name = "哔哩哔哩直播",
-                        episodeList = resp.data!!.durl.mapIndexed { index, durl ->
+                        episodeList = listOf(
                             MediaEpisode(
                                 id = "$MEDIA_ID_LIVE_ROOM_PREFIX${roomInfo.roomId}",
                                 name = if (resp.message.isNotBlank()) resp.message else "获取直播地址失败",
                             )
-                        }
+                        )
                     )
                 )
             }
