@@ -226,7 +226,7 @@ class MainScreenService(
                         detailUrl = id,
                         title = it.title,
                         subTitle = "[直播]${it.uname}",
-                        coverImageUrl = it.roomCover,
+                        coverImageUrl = if (it.roomCover.isNotBlank()) it.roomCover else BilibiliConst.IMAGE_NO_COVER,
                     )
                 },
                 cardWidth = BilibiliConst.AV_CARD_WIDTH,

@@ -227,7 +227,7 @@ class ActionDelegate(
                 title = "播放进度上报",
                 detailUrl = ACTION_VIDEO_HEARTBEAT,
                 subTitle = subTitle,
-                backgroundImageUrl = "https://i0.hdslb.com/bfs/creative/23f832f985f4af14863a0a3d304f6fbfa0d61173.png@328w_185h.png",
+                backgroundImageUrl = BilibiliConst.IMAGE_NO_SIGNAL,
                 description = "开启后会在点击视频播放按钮时上报给Bilibili，使Bilibili可以记录播放历史。\n" +
                         "因为插件目前只能在点击按钮时上报一次（与实际播放与否、播放进度无关），所以目前只支持一次性上报播放进度为0(开始播放)或-1(播放完成)。",
                 playSourceList = listOf(),
