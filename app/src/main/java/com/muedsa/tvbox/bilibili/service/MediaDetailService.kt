@@ -67,12 +67,14 @@ class MediaDetailService(
             return actionDelegate.exec(action = mediaId, data = detailUrl)
         }
         return if (mediaId.startsWith(MEDIA_ID_BV_PREFIX)) {
-            val page =
-                if (detailUrl.isNotEmpty() && detailUrl.startsWith("{") && detailUrl.endsWith("}")) {
-                    val attrs = LenientJson.decodeFromString<BiliVideoDetailUrlAttrs>(detailUrl)
-                    attrs.page
-                } else 1
-            videoDetail(bvid = mediaId, page = page)
+            var page = 1
+            var historyToView = false
+            if (detailUrl.isNotEmpty() && detailUrl.startsWith("{") && detailUrl.endsWith("}")) {
+                val attrs = LenientJson.decodeFromString<BiliVideoDetailUrlAttrs>(detailUrl)
+                page = attrs.page
+                historyToView = attrs.historyToView
+            }
+            videoDetail(bvid = mediaId, page = page, historyToView = historyToView)
         } else if (mediaId.startsWith(MEDIA_ID_LIVE_ROOM_PREFIX)) {
             liveRoomDetail(roomId = mediaId.removePrefix(MEDIA_ID_LIVE_ROOM_PREFIX).toLong())
         } else if (mediaId.startsWith(MEDIA_ID_USER_SPACE_PREFIX)) {
@@ -82,7 +84,11 @@ class MediaDetailService(
         }
     }
 
-    private suspend fun videoDetail(bvid: String, page: Int = 1): MediaDetail {
+    private suspend fun videoDetail(
+        bvid: String,
+        page: Int = 1,
+        historyToView: Boolean = false
+    ): MediaDetail {
         val referer =
             "${BilibiliConst.MAIN_SITE_URL}/video/${bvid}/?spm_id_from=333.1007.tianma.1-1-1.click"
         val resp = apiService.wbiView(bvid)
@@ -204,7 +210,13 @@ class MediaDetailService(
                                         flag1 = 1,
                                         flag3 = info.aid,
                                         flag5 = referer,
-                                    )
+                                    ),
+                                    MediaEpisode(
+                                        id = if (historyToView) "$HISTORY_TO_VIEW_DEL_PREFIX${info.bvid}" else "$HISTORY_TO_VIEW_ADD_PREFIX${info.bvid}",
+                                        name = if (historyToView) "从稍后再看中移除" else "添加至稍后再看",
+                                        flag3 = info.aid,
+                                        flag5 = info.bvid,
+                                    ),
                                 )
                             )
                         }
@@ -531,6 +543,10 @@ class MediaDetailService(
             return getLiveEpisodePlayInfo(episode = episode)
         } else if (episode.id.startsWith(EPISODE_ID_COIN_ADD_PREFIX)) {
             return coinAdd(episode = episode)
+        } else if (episode.id.startsWith(HISTORY_TO_VIEW_ADD_PREFIX)) {
+            return historyToViewAdd(episode = episode)
+        } else if (episode.id.startsWith(HISTORY_TO_VIEW_DEL_PREFIX)) {
+            return historyToViewDel(episode = episode)
         } else {
             TODO("暂不支持的类型 ${episode.id}")
         }
@@ -619,6 +635,30 @@ class MediaDetailService(
         throw RuntimeException(message)
     }
 
+    private suspend fun historyToViewAdd(episode: MediaEpisode): MediaHttpSource {
+        val resp = apiService.historyToViewAdd(
+            aid = episode.flag3 ?: throw RuntimeException("aid为空"),
+            csrf = BiliCookieHelper.getCookeValue(
+                cookieSaver = cookieSaver,
+                cookieName = BiliCookieHelper.COOKIE_B_JCT
+            ) ?: throw RuntimeException("未登录")
+        )
+        val message = if (resp.code != 0L) resp.message else "添加成功"
+        throw RuntimeException(message)
+    }
+
+    private suspend fun historyToViewDel(episode: MediaEpisode): MediaHttpSource {
+        val resp = apiService.historyToViewDel(
+            bvids = episode.flag5 ?: throw RuntimeException("bvid为空"),
+            csrf = BiliCookieHelper.getCookeValue(
+                cookieSaver = cookieSaver,
+                cookieName = BiliCookieHelper.COOKIE_B_JCT
+            ) ?: throw RuntimeException("未登录")
+        )
+        val message = if (resp.code != 0L) resp.message else "移除成功"
+        throw RuntimeException(message)
+    }
+
     override suspend fun getEpisodeDanmakuDataList(episode: MediaEpisode): List<DanmakuData> {
         return if (
             episode.id.startsWith(MEDIA_ID_BV_PREFIX)
@@ -701,6 +741,8 @@ class MediaDetailService(
         const val MEDIA_ID_LIVE_ROOM_PREFIX = "LIVE_ROOM:"
         const val MEDIA_ID_USER_SPACE_PREFIX = "USER_SPACE:"
         const val EPISODE_ID_COIN_ADD_PREFIX = "COIN_ADD:"
+        const val HISTORY_TO_VIEW_ADD_PREFIX = "HISTORY_TO_VIEW_ADD:"
+        const val HISTORY_TO_VIEW_DEL_PREFIX = "HISTORY_TO_VIEW_DEL:"
         val V_VOUCHER_MEDIA_EPISODE_LIST = listOf(
             MediaEpisode(
                 id = " MEDIA_EPISODE_V_VOUCHER",

@@ -8,6 +8,7 @@ import kotlinx.serialization.encodeToString
 data class BiliVideoDetailUrlAttrs(
     val bvid: String,
     val page: Int = 1,
+    val historyToView: Boolean = false,
 ) {
     fun toJsonString(): String = LenientJson.encodeToString(this)
 }

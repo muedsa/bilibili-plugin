@@ -354,7 +354,10 @@ class MainScreenService(
                 list = resp.data.list.map {
                     MediaCard(
                         id = it.bvid,
-                        detailUrl = BiliVideoDetailUrlAttrs(bvid = it.bvid).toJsonString(),
+                        detailUrl = BiliVideoDetailUrlAttrs(
+                            bvid = it.bvid,
+                            historyToView = true,
+                        ).toJsonString(),
                         title = it.title,
                         subTitle = it.owner?.name ?: "",
                         coverImageUrl = it.pic

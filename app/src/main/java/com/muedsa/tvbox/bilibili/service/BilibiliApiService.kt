@@ -129,6 +129,25 @@ interface BilibiliApiService {
         @Header("User-Agent") userAgent: String = ChromeUserAgent,
     ) : BiliResp<HistoryToView>
 
+    @POST("x/v2/history/toview/add")
+    @FormUrlEncoded
+    suspend fun historyToViewAdd(
+        @Field("aid") aid: Long,
+        @Field("csrf") csrf: String,
+        @Header("Referer") referer: String = "${BilibiliConst.MAIN_SITE_URL}/",
+        @Header("User-Agent") userAgent: String = ChromeUserAgent,
+    ) : BiliResp<Unit>
+
+    @POST("x/v2/history/toview/del")
+    @FormUrlEncoded
+    suspend fun historyToViewDel(
+        @Field("bvids") bvids: String,
+        @Field("viewed") viewed: Boolean = false,
+        @Field("csrf") csrf: String,
+        @Header("Referer") referer: String = "${BilibiliConst.MAIN_SITE_URL}/",
+        @Header("User-Agent") userAgent: String = ChromeUserAgent,
+    ) : BiliResp<Unit>
+
     @OptIn(ExperimentalUuidApi::class)
     @FormUrlEncoded
     @POST("x/click-interface/web/heartbeat")
