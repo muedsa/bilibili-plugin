@@ -67,14 +67,7 @@ class MediaDetailService(
             return actionDelegate.exec(action = mediaId, data = detailUrl)
         }
         return if (mediaId.startsWith(MEDIA_ID_BV_PREFIX)) {
-            var page = 1
-            var historyToView = false
-            if (detailUrl.isNotEmpty() && detailUrl.startsWith("{") && detailUrl.endsWith("}")) {
-                val attrs = LenientJson.decodeFromString<BiliVideoDetailUrlAttrs>(detailUrl)
-                page = attrs.page
-                historyToView = attrs.historyToView
-            }
-            videoDetail(bvid = mediaId, page = page, historyToView = historyToView)
+            videoDetail(attrs = LenientJson.decodeFromString<BiliVideoDetailUrlAttrs>(detailUrl))
         } else if (mediaId.startsWith(MEDIA_ID_LIVE_ROOM_PREFIX)) {
             liveRoomDetail(roomId = mediaId.removePrefix(MEDIA_ID_LIVE_ROOM_PREFIX).toLong())
         } else if (mediaId.startsWith(MEDIA_ID_USER_SPACE_PREFIX)) {
@@ -85,29 +78,27 @@ class MediaDetailService(
     }
 
     private suspend fun videoDetail(
-        bvid: String,
-        page: Int = 1,
-        historyToView: Boolean = false
+        attrs: BiliVideoDetailUrlAttrs
     ): MediaDetail {
         val referer =
-            "${BilibiliConst.MAIN_SITE_URL}/video/${bvid}/?spm_id_from=333.1007.tianma.1-1-1.click"
-        val resp = apiService.wbiView(bvid)
+            "${BilibiliConst.MAIN_SITE_URL}/video/${attrs.bvid}/?spm_id_from=333.1007.tianma.1-1-1.click"
+        val resp = apiService.wbiView(attrs.bvid)
         if (resp.code != 0L || resp.data == null) {
             throw RuntimeException("查询稿件详情失败 ${resp.message}")
         }
         val info = resp.data
-        val pageInfo = info.pages.find { it.page == page } ?: info.pages.first()
+        val pageInfo = info.pages.find { it.page == attrs.page } ?: info.pages.first()
         val newDetailUrl = LenientJson.encodeToString(
-            BiliVideoDetailUrlAttrs(bvid = bvid, page = pageInfo.page)
+            BiliVideoDetailUrlAttrs(bvid = attrs.bvid, page = pageInfo.page)
         )
         val savedDetailUrl = LenientJson.encodeToString(
-            BiliVideoDetailUrlAttrs(bvid = bvid, page = 1)
+            BiliVideoDetailUrlAttrs(bvid = attrs.bvid, page = 1)
         )
         val rows = mutableListOf<MediaCardRow>()
         if (info.pages.size > 1) {
             rows.add(
                 MediaCardRow(
-                    title = "视频选集 ($page/${info.pages.size})",
+                    title = "视频选集 (${attrs.page}/${info.pages.size})",
                     list = info.pages.map {
                         MediaCard(
                             id = info.bvid,
@@ -168,7 +159,7 @@ class MediaDetailService(
             )
         }
         return MediaDetail(
-            id = bvid,
+            id = info.bvid,
             title = info.title,
             subTitle = pageInfo.part,
             description = buildList<String> {
@@ -212,8 +203,8 @@ class MediaDetailService(
                                         flag5 = referer,
                                     ),
                                     MediaEpisode(
-                                        id = if (historyToView) "$HISTORY_TO_VIEW_DEL_PREFIX${info.bvid}" else "$HISTORY_TO_VIEW_ADD_PREFIX${info.bvid}",
-                                        name = if (historyToView) "从稍后再看中移除" else "添加至稍后再看",
+                                        id = if (attrs.historyToView) "$HISTORY_TO_VIEW_DEL_PREFIX${info.bvid}" else "$HISTORY_TO_VIEW_ADD_PREFIX${info.bvid}",
+                                        name = if (attrs.historyToView) "从稍后再看中移除" else "添加至稍后再看",
                                         flag3 = info.aid,
                                         flag5 = info.bvid,
                                     ),
@@ -223,7 +214,7 @@ class MediaDetailService(
                 )
             ),
             favoritedMediaCard = SavedMediaCard(
-                id = bvid,
+                id = info.bvid,
                 title = info.title,
                 detailUrl = savedDetailUrl,
                 coverImageUrl = info.pic,
