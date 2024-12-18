@@ -36,6 +36,8 @@ import com.muedsa.tvbox.tool.md5
 import com.muedsa.tvbox.tool.parseHtml
 import com.muedsa.tvbox.tool.toRequestBuild
 import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonObject
 import okhttp3.OkHttpClient
 import timber.log.Timber
 import java.text.SimpleDateFormat
@@ -228,20 +230,33 @@ class MediaDetailService(
 
     @OptIn(ExperimentalStdlibApi::class)
     private suspend fun getVideoEpisodeList(info: VideoDetail, pageInfo: VideoPage): List<MediaEpisode> {
-        var resp: BiliResp<PlayUrl>? = null
+        //var resp: BiliResp<PlayUrl>? = null
         val url = "${BilibiliConst.MAIN_SITE_URL}/video/${info.bvid}/?spm_id_from=333.1007.tianma.1-1-1.click"
         val head = url.toRequestBuild()
             .feignChrome(referer = "${BilibiliConst.MAIN_SITE_URL}/")
             .get(okHttpClient = okHttpClient)
             .parseHtml()
             .head()
-        val playUrlJson = PLAY_URL_REGEX.find(head.html())?.groups[1]?.value
-        Timber.d("playUrlFromHtml=$playUrlJson")
+        val headHtml = head.html()
+        var playUrlJson = PLAY_URL_REGEX.find(headHtml)?.groups[1]?.value
         if (playUrlJson.isNullOrEmpty()) {
+            PLAY_URL_SSR_DATA_REGEX.find(headHtml)?.groups[1]?.value?.let {
+                playUrlJson = LenientJson.parseToJsonElement(it)
+                    .jsonObject["result"]
+                    ?.jsonObject["video_info"]
+                    ?.let {
+                        if (it is JsonObject) {
+                            """{"code": 0, "data": $it}"""
+                        } else null
+                    }
+            }
+        }
+        Timber.d("playUrlFromHtml=$playUrlJson")
+        val resp: BiliResp<PlayUrl> = if (playUrlJson.isNullOrEmpty()) {
             // 尝试从SSR页面获取失败, 从接口请求获取
             val b3 = BiliCookieHelper.getCookeValue(cookieSaver = cookieSaver, cookieName = BiliCookieHelper.COOKIE_B_3)
             val session = "$b3${System.currentTimeMillis()}".md5().toHexString()
-            resp = apiService.wbiPlayUrl(
+            apiService.wbiPlayUrl(
                 BiliApiHelper.buildWbiPlayUrlParams(
                     aid = info.aid,
                     bvid = info.bvid,
@@ -253,7 +268,7 @@ class MediaDetailService(
                 referer = url
             )
         } else {
-            resp = LenientJson.decodeFromString<BiliResp<PlayUrl>>(playUrlJson)
+            LenientJson.decodeFromString<BiliResp<PlayUrl>>(playUrlJson)
         }
         if (resp.code != 0L || resp.data == null) {
             return listOf(
@@ -743,5 +758,6 @@ class MediaDetailService(
         )
         const val USER_SPACE_VIDEO_ROW_SIZE = 30
         val PLAY_URL_REGEX = "<script>window\\.__playinfo__=(\\{.*?\\})</script>".toRegex()
+        val PLAY_URL_SSR_DATA_REGEX = "const playurlSSRData = (\\{.*?\\}\n)".toRegex()
     }
 }
