@@ -219,6 +219,7 @@ class MediaDetailService(
                 id = info.bvid,
                 title = info.title,
                 detailUrl = savedDetailUrl,
+                subTitle = info.owner?.name,
                 coverImageUrl = info.pic,
                 cardWidth = BilibiliConst.AV_CARD_WIDTH,
                 cardHeight = BilibiliConst.AV_CARD_HEIGHT,
