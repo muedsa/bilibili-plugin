@@ -4,7 +4,10 @@ import com.muedsa.tvbox.api.data.MediaCardType
 import com.muedsa.tvbox.bilibili.TestPlugin
 import com.muedsa.tvbox.bilibili.checkMediaCard
 import com.muedsa.tvbox.bilibili.checkMediaCardRow
+import com.muedsa.tvbox.bilibili.model.BiliVideoDetailUrlAttrs
+import com.muedsa.tvbox.tool.LenientJson
 import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.encodeToString
 import org.junit.Test
 
 class MediaDetailServiceTest {
@@ -13,7 +16,14 @@ class MediaDetailServiceTest {
 
     @Test
     fun getDetailData_test() = runTest{
-        val detail = service.getDetailData("17998", "17998")
+        val detail = service.getDetailData(
+            mediaId = "BV1JSD8YSEK5",
+            detailUrl = LenientJson.encodeToString(
+                BiliVideoDetailUrlAttrs(
+                    bvid = "BV1JSD8YSEK5"
+                )
+            )
+        )
         check(detail.id.isNotEmpty())
         check(detail.title.isNotEmpty())
         check(detail.detailUrl.isNotEmpty())
@@ -40,7 +50,14 @@ class MediaDetailServiceTest {
 
     @Test
     fun getEpisodePlayInfo_test() = runTest{
-        val detail = service.getDetailData("BV1JSD8YSEK5", "")
+        val detail = service.getDetailData(
+            mediaId = "BV1JSD8YSEK5",
+            detailUrl = LenientJson.encodeToString(
+                BiliVideoDetailUrlAttrs(
+                    bvid = "BV1JSD8YSEK5"
+                )
+            )
+        )
         check(detail.playSourceList.isNotEmpty())
         check(detail.playSourceList.flatMap { it.episodeList }.isNotEmpty())
         val mediaPlaySource = detail.playSourceList[0]
