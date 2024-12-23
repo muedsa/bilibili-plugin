@@ -10,6 +10,8 @@ import com.muedsa.tvbox.bilibili.BILI_REFRESH_TOKEN_KEY
 import com.muedsa.tvbox.bilibili.BILI_VIDEO_HEARTBEAT
 import com.muedsa.tvbox.bilibili.BilibiliConst
 import com.muedsa.tvbox.bilibili.helper.BiliCookieHelper
+import com.muedsa.tvbox.bilibili.model.CoinAddParams
+import com.muedsa.tvbox.bilibili.model.HistoryToViewModifyParams
 import com.muedsa.tvbox.bilibili.model.LoginState
 import com.muedsa.tvbox.bilibili.model.QRCodeLoginCache
 import com.muedsa.tvbox.bilibili.model.UserRelationModifyParams
@@ -54,9 +56,9 @@ class ActionDelegate(
                 videoHeartbeat(updateConfig = updateConfig)
             }
 
-            ACTION_INVALID -> throw RuntimeException("这是一个动作卡片,请删除")
+            ACTION_INVALID -> throw IllegalArgumentException("这是一个动作卡片,请删除")
 
-            else -> throw RuntimeException("未知动作")
+            else -> throw IllegalArgumentException("未知动作")
         }
         return mediaDetail
     }
@@ -69,12 +71,36 @@ class ActionDelegate(
             ACTION_USER_FOLLOW -> {
                 userRelationModify(
                     params = LenientJson.decodeFromString<UserRelationModifyParams>(
-                        data ?: throw RuntimeException("参数错误")
+                        data ?: throw IllegalArgumentException("参数错误")
                     )
                 )
             }
 
-            else -> throw RuntimeException("未知动作")
+            ACTION_COIN_ADD -> {
+                coinAdd(
+                    params = LenientJson.decodeFromString<CoinAddParams>(
+                        data ?: throw IllegalArgumentException("参数错误")
+                    )
+                )
+            }
+
+            ACTION_HISTORY_TO_VIEW_ADD -> {
+                historyToViewAdd(
+                    params = LenientJson.decodeFromString<HistoryToViewModifyParams>(
+                        data ?: throw IllegalArgumentException("参数错误")
+                    )
+                )
+            }
+
+            ACTION_HISTORY_TO_VIEW_DEL -> {
+                historyToViewDel(
+                    params = LenientJson.decodeFromString<HistoryToViewModifyParams>(
+                        data ?: throw IllegalArgumentException("参数错误")
+                    )
+                )
+            }
+
+            else -> throw IllegalArgumentException("未知动作")
         }
         return source
     }
@@ -174,14 +200,56 @@ class ActionDelegate(
         }
     }
 
+    private suspend fun coinAdd(params: CoinAddParams): MediaHttpSource {
+        val resp = apiService.coinAdd(
+            aid = params.aid,
+            multiply = params.multiply,
+            selectLike = params.selectLike,
+            referer = params.referer,
+            csrf = BiliCookieHelper.getCookeValue(
+                cookieSaver = cookieSaver,
+                cookieName = BiliCookieHelper.COOKIE_B_JCT
+            ) ?: throw RuntimeException("未登录")
+        )
+        val message = if (resp.code != 0L) resp.message else "投币成功"
+        throw RuntimeException(message)
+    }
+
+    private suspend fun historyToViewAdd(params: HistoryToViewModifyParams): MediaHttpSource {
+        val resp = apiService.historyToViewAdd(
+            aid = params.aid,
+            csrf = BiliCookieHelper.getCookeValue(
+                cookieSaver = cookieSaver,
+                cookieName = BiliCookieHelper.COOKIE_B_JCT
+            ) ?: throw RuntimeException("未登录")
+        )
+        val message = if (resp.code != 0L) resp.message else "添加成功"
+        throw RuntimeException(message)
+    }
+
+    private suspend fun historyToViewDel(params: HistoryToViewModifyParams): MediaHttpSource {
+        val resp = apiService.historyToViewDel(
+            bvids = params.bvid,
+            csrf = BiliCookieHelper.getCookeValue(
+                cookieSaver = cookieSaver,
+                cookieName = BiliCookieHelper.COOKIE_B_JCT
+            ) ?: throw RuntimeException("未登录")
+        )
+        val message = if (resp.code != 0L) resp.message else "移除成功"
+        throw RuntimeException(message)
+    }
+
     companion object {
         const val ACTION_PREFIX = "action_"
         const val ACTION_INVALID = "${ACTION_PREFIX}invalid"
         const val ACTION_QRCODE_LOGIN = "${ACTION_PREFIX}qrcode_login"
         const val ACTION_QRCODE_LOGIN_POLL = "${ACTION_PREFIX}qrcode_login_poll"
         const val ACTION_LOGOUT = "${ACTION_PREFIX}logout"
-        const val ACTION_VIDEO_HEARTBEAT = "${ACTION_PREFIX}_VIDEO_HEARTBEAT"
-        const val ACTION_USER_FOLLOW = "${ACTION_PREFIX}_USER_FOLLOW"
+        const val ACTION_VIDEO_HEARTBEAT = "${ACTION_PREFIX}_video_heartbeat"
+        const val ACTION_USER_FOLLOW = "${ACTION_PREFIX}_user_follow"
+        const val ACTION_COIN_ADD = "${ACTION_PREFIX}_coin_add"
+        const val ACTION_HISTORY_TO_VIEW_ADD = "${ACTION_PREFIX}_history_to_view_add"
+        const val ACTION_HISTORY_TO_VIEW_DEL = "${ACTION_PREFIX}_history_to_view_del"
 
         val LOGIN_ACTION_CARD = MediaCard(
             id = ACTION_QRCODE_LOGIN,

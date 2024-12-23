@@ -19,6 +19,8 @@ import com.muedsa.tvbox.bilibili.helper.BiliApiHelper
 import com.muedsa.tvbox.bilibili.helper.BiliCookieHelper
 import com.muedsa.tvbox.bilibili.helper.WBIHelper.decodeURIComponent
 import com.muedsa.tvbox.bilibili.model.BiliVideoDetailUrlAttrs
+import com.muedsa.tvbox.bilibili.model.CoinAddParams
+import com.muedsa.tvbox.bilibili.model.HistoryToViewModifyParams
 import com.muedsa.tvbox.bilibili.model.UserRelationModifyParams
 import com.muedsa.tvbox.bilibili.model.VideoHeartbeatInfo
 import com.muedsa.tvbox.bilibili.model.bilibili.BiliResp
@@ -192,24 +194,36 @@ class MediaDetailService(
                                 index = if (isNotEmpty()) 1 else 0,
                                 listOf(
                                     MediaEpisode(
-                                        id = "$EPISODE_ID_COIN_ADD_PREFIX${info.bvid}",
+                                        id = ActionDelegate.ACTION_COIN_ADD,
                                         name = "投币+2 & 点赞",
-                                        flag1 = 2,
-                                        flag3 = info.aid,
-                                        flag5 = referer,
+                                        flag5 = LenientJson.encodeToString(
+                                            CoinAddParams(
+                                                aid = info.aid,
+                                                multiply = 2,
+                                                referer = referer,
+                                            )
+                                        ),
                                     ),
                                     MediaEpisode(
-                                        id = "$EPISODE_ID_COIN_ADD_PREFIX${info.bvid}",
+                                        id = ActionDelegate.ACTION_COIN_ADD,
                                         name = "投币+1 & 点赞",
-                                        flag1 = 1,
-                                        flag3 = info.aid,
-                                        flag5 = referer,
+                                        flag5 = LenientJson.encodeToString(
+                                            CoinAddParams(
+                                                aid = info.aid,
+                                                multiply = 1,
+                                                referer = referer,
+                                            )
+                                        ),
                                     ),
                                     MediaEpisode(
-                                        id = if (attrs.historyToView) "$HISTORY_TO_VIEW_DEL_PREFIX${info.bvid}" else "$HISTORY_TO_VIEW_ADD_PREFIX${info.bvid}",
+                                        id = if (attrs.historyToView) ActionDelegate.ACTION_HISTORY_TO_VIEW_DEL else ActionDelegate.ACTION_HISTORY_TO_VIEW_ADD,
                                         name = if (attrs.historyToView) "从稍后再看中移除" else "添加至稍后再看",
-                                        flag3 = info.aid,
-                                        flag5 = info.bvid,
+                                        flag5 = LenientJson.encodeToString(
+                                            HistoryToViewModifyParams(
+                                                bvid = info.bvid,
+                                                aid = info.aid,
+                                            )
+                                        ),
                                     ),
                                 )
                             )
@@ -590,12 +604,6 @@ class MediaDetailService(
             return getVideoEpisodePlayInfo(episode = episode)
         } else if (episode.id.startsWith(MEDIA_ID_LIVE_ROOM_PREFIX)) {
             return getLiveEpisodePlayInfo(episode = episode)
-        } else if (episode.id.startsWith(EPISODE_ID_COIN_ADD_PREFIX)) {
-            return coinAdd(episode = episode)
-        } else if (episode.id.startsWith(HISTORY_TO_VIEW_ADD_PREFIX)) {
-            return historyToViewAdd(episode = episode)
-        } else if (episode.id.startsWith(HISTORY_TO_VIEW_DEL_PREFIX)) {
-            return historyToViewDel(episode = episode)
         } else {
             TODO("暂不支持的类型 ${episode.id}")
         }
@@ -668,44 +676,6 @@ class MediaDetailService(
         // val roomId = episode.id.removePrefix(MEDIA_ID_LIVE_ROOM_PREFIX)
         val url = episode.flag5 ?: throw RuntimeException("获取直播地址失败")
         return MediaHttpSource(url = url)
-    }
-
-    private suspend fun coinAdd(episode: MediaEpisode): MediaHttpSource {
-        val resp = apiService.coinAdd(
-            aid = episode.flag3 ?: throw RuntimeException("aid为空"),
-            multiply = episode.flag1 ?: 1,
-            referer = episode.flag5 ?: BilibiliConst.MAIN_SITE_URL,
-            csrf = BiliCookieHelper.getCookeValue(
-                cookieSaver = cookieSaver,
-                cookieName = BiliCookieHelper.COOKIE_B_JCT
-            ) ?: throw RuntimeException("未登录")
-        )
-        val message = if (resp.code != 0L) resp.message else "投币成功"
-        throw RuntimeException(message)
-    }
-
-    private suspend fun historyToViewAdd(episode: MediaEpisode): MediaHttpSource {
-        val resp = apiService.historyToViewAdd(
-            aid = episode.flag3 ?: throw RuntimeException("aid为空"),
-            csrf = BiliCookieHelper.getCookeValue(
-                cookieSaver = cookieSaver,
-                cookieName = BiliCookieHelper.COOKIE_B_JCT
-            ) ?: throw RuntimeException("未登录")
-        )
-        val message = if (resp.code != 0L) resp.message else "添加成功"
-        throw RuntimeException(message)
-    }
-
-    private suspend fun historyToViewDel(episode: MediaEpisode): MediaHttpSource {
-        val resp = apiService.historyToViewDel(
-            bvids = episode.flag5 ?: throw RuntimeException("bvid为空"),
-            csrf = BiliCookieHelper.getCookeValue(
-                cookieSaver = cookieSaver,
-                cookieName = BiliCookieHelper.COOKIE_B_JCT
-            ) ?: throw RuntimeException("未登录")
-        )
-        val message = if (resp.code != 0L) resp.message else "移除成功"
-        throw RuntimeException(message)
     }
 
     override suspend fun getEpisodeDanmakuDataList(episode: MediaEpisode): List<DanmakuData> {
@@ -789,9 +759,6 @@ class MediaDetailService(
         const val MEDIA_ID_BV_PREFIX = "BV"
         const val MEDIA_ID_LIVE_ROOM_PREFIX = "LIVE_ROOM:"
         const val MEDIA_ID_USER_SPACE_PREFIX = "USER_SPACE:"
-        const val EPISODE_ID_COIN_ADD_PREFIX = "COIN_ADD:"
-        const val HISTORY_TO_VIEW_ADD_PREFIX = "HISTORY_TO_VIEW_ADD:"
-        const val HISTORY_TO_VIEW_DEL_PREFIX = "HISTORY_TO_VIEW_DEL:"
         val V_VOUCHER_MEDIA_EPISODE_LIST = listOf(
             MediaEpisode(
                 id = " MEDIA_EPISODE_V_VOUCHER",
