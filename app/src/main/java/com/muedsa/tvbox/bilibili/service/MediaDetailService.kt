@@ -127,7 +127,7 @@ class MediaDetailService(
                             MediaCard(
                                 id = it.bvid,
                                 detailUrl = BiliVideoDetailUrlAttrs(
-                                    bvid = info.bvid,
+                                    bvid = it.bvid,
                                     page = 1,
                                 ).toJsonString(),
                                 title = it.title,
