@@ -7,6 +7,7 @@ import com.muedsa.tvbox.bilibili.model.bilibili.CoinAdd
 import com.muedsa.tvbox.bilibili.model.bilibili.DataFlow
 import com.muedsa.tvbox.bilibili.model.bilibili.DynamicCard
 import com.muedsa.tvbox.bilibili.model.bilibili.FingerSpi
+import com.muedsa.tvbox.bilibili.model.bilibili.FriendRelation
 import com.muedsa.tvbox.bilibili.model.bilibili.HistoryCursorFlow
 import com.muedsa.tvbox.bilibili.model.bilibili.HistoryToView
 import com.muedsa.tvbox.bilibili.model.bilibili.Nav
@@ -194,4 +195,23 @@ interface BilibiliApiService {
         @Header("Referer") referer: String,
         @Header("User-Agent") userAgent: String = ChromeUserAgent,
     ): BiliResp<CoinAdd>
+
+    @GET("/x/relation")
+    suspend fun relation(
+        @QueryMap params: Map<String, String>,
+        @Header("Referer") referer: String,
+        @Header("User-Agent") userAgent: String = ChromeUserAgent,
+    ): BiliResp<FriendRelation>
+
+    @POST("x/relation/modify")
+    @FormUrlEncoded
+    suspend fun relationModify(
+        @Field("fid") fid: Long,
+        @Field("act") act: Int = 1,
+        @Field("re_src") reSrc: Int = 11,
+        @Field("gaia_source") gaiaSource: String = "web_main",
+        @Field("spmid") spmId: String = "333.999.0.0",
+        @Field("extend_content") extendContent: String? = null,
+        @Field("csrf") csrf: String,
+    ): BiliResp<Unit>
 }

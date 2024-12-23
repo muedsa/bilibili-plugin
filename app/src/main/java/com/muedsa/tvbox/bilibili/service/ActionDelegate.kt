@@ -4,6 +4,7 @@ import com.muedsa.tvbox.api.data.MediaCard
 import com.muedsa.tvbox.api.data.MediaCardRow
 import com.muedsa.tvbox.api.data.MediaCardType
 import com.muedsa.tvbox.api.data.MediaDetail
+import com.muedsa.tvbox.api.data.MediaHttpSource
 import com.muedsa.tvbox.api.store.IPluginPerfStore
 import com.muedsa.tvbox.bilibili.BILI_REFRESH_TOKEN_KEY
 import com.muedsa.tvbox.bilibili.BILI_VIDEO_HEARTBEAT
@@ -11,6 +12,7 @@ import com.muedsa.tvbox.bilibili.BilibiliConst
 import com.muedsa.tvbox.bilibili.helper.BiliCookieHelper
 import com.muedsa.tvbox.bilibili.model.LoginState
 import com.muedsa.tvbox.bilibili.model.QRCodeLoginCache
+import com.muedsa.tvbox.bilibili.model.UserRelationModifyParams
 import com.muedsa.tvbox.tool.LenientJson
 import com.muedsa.tvbox.tool.SharedCookieSaver
 import com.muedsa.tvbox.tool.feignChrome
@@ -23,8 +25,9 @@ import okhttp3.OkHttpClient
 import timber.log.Timber
 
 class ActionDelegate(
-    private val passportService: BilibiliPassportService,
     private val okHttpClient: OkHttpClient,
+    private val passportService: BilibiliPassportService,
+    private val apiService: BilibiliApiService,
     private val store: IPluginPerfStore,
     private val cookieSaver: SharedCookieSaver,
 ) {
@@ -56,6 +59,24 @@ class ActionDelegate(
             else -> throw RuntimeException("未知动作")
         }
         return mediaDetail
+    }
+
+    suspend fun execAsGetEpisodePlayInfo(
+        action: String,
+        data: String?
+    ): MediaHttpSource {
+        val source = when (action) {
+            ACTION_USER_FOLLOW -> {
+                userRelationModify(
+                    params = LenientJson.decodeFromString<UserRelationModifyParams>(
+                        data ?: throw RuntimeException("参数错误")
+                    )
+                )
+            }
+
+            else -> throw RuntimeException("未知动作")
+        }
+        return source
     }
 
     private suspend fun qrCodeLogin(): MediaDetail {
@@ -138,6 +159,21 @@ class ActionDelegate(
         return createVideoHeartbeatMediaDetail(config)
     }
 
+    private suspend fun userRelationModify(params: UserRelationModifyParams): MediaHttpSource {
+        val resp = apiService.relationModify(
+            fid = params.fid, act = params.act, csrf = BiliCookieHelper.getCookeValue(
+                cookieSaver = cookieSaver,
+                cookieName = BiliCookieHelper.COOKIE_B_JCT,
+                defaultValue = null
+            ) ?: throw RuntimeException("请登录后重试")
+        )
+        if (resp.code == 0L) {
+            throw RuntimeException("关注成功")
+        } else {
+            throw RuntimeException(resp.message)
+        }
+    }
+
     companion object {
         const val ACTION_PREFIX = "action_"
         const val ACTION_INVALID = "${ACTION_PREFIX}invalid"
@@ -145,6 +181,7 @@ class ActionDelegate(
         const val ACTION_QRCODE_LOGIN_POLL = "${ACTION_PREFIX}qrcode_login_poll"
         const val ACTION_LOGOUT = "${ACTION_PREFIX}logout"
         const val ACTION_VIDEO_HEARTBEAT = "${ACTION_PREFIX}_VIDEO_HEARTBEAT"
+        const val ACTION_USER_FOLLOW = "${ACTION_PREFIX}_USER_FOLLOW"
 
         val LOGIN_ACTION_CARD = MediaCard(
             id = ACTION_QRCODE_LOGIN,

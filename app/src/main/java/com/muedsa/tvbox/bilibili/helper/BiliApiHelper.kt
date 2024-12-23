@@ -193,4 +193,17 @@ object BiliApiHelper {
         return params
     }
 
+    fun buildRelationParams(
+        fid: Long,
+        wWebId: String,
+        mixinKey: String,
+    ): MutableMap<String, String> {
+        val params = mutableMapOf<String, String>(
+            "fid" to "$fid",
+            "web_location" to "333.999",
+            "w_webid" to wWebId,
+        )
+        WBIHelper.fillWbiParams(params = params, mixinKey = mixinKey)
+        return params
+    }
 }

@@ -19,6 +19,7 @@ import com.muedsa.tvbox.bilibili.helper.BiliApiHelper
 import com.muedsa.tvbox.bilibili.helper.BiliCookieHelper
 import com.muedsa.tvbox.bilibili.helper.WBIHelper.decodeURIComponent
 import com.muedsa.tvbox.bilibili.model.BiliVideoDetailUrlAttrs
+import com.muedsa.tvbox.bilibili.model.UserRelationModifyParams
 import com.muedsa.tvbox.bilibili.model.VideoHeartbeatInfo
 import com.muedsa.tvbox.bilibili.model.bilibili.BiliResp
 import com.muedsa.tvbox.bilibili.model.bilibili.LiveUserRoomInfo
@@ -60,15 +61,15 @@ class MediaDetailService(
     private val actionDelegate = ActionDelegate(
         okHttpClient = okHttpClient,
         passportService = passportService,
+        apiService = apiService,
         store = store,
         cookieSaver = cookieSaver,
     )
 
     override suspend fun getDetailData(mediaId: String, detailUrl: String): MediaDetail {
-        if (mediaId.startsWith(ActionDelegate.ACTION_PREFIX)) {
-            return actionDelegate.exec(action = mediaId, data = detailUrl)
-        }
-        return if (mediaId.startsWith(MEDIA_ID_BV_PREFIX)) {
+        return if (mediaId.startsWith(ActionDelegate.ACTION_PREFIX)) {
+            actionDelegate.exec(action = mediaId, data = detailUrl)
+        } else if (mediaId.startsWith(MEDIA_ID_BV_PREFIX)) {
             videoDetail(attrs = LenientJson.decodeFromString<BiliVideoDetailUrlAttrs>(detailUrl))
         } else if (mediaId.startsWith(MEDIA_ID_LIVE_ROOM_PREFIX)) {
             liveRoomDetail(roomId = mediaId.removePrefix(MEDIA_ID_LIVE_ROOM_PREFIX).toLong())
@@ -466,7 +467,7 @@ class MediaDetailService(
             ?: throw RuntimeException("获取access_id失败")
         val renderData =
             LenientJson.decodeFromString<UserSpaceRenderData>(html.decodeURIComponent())
-        val resp = apiService.spaceWbiAccInfo(
+        val userInfoResp = apiService.spaceWbiAccInfo(
             params = BiliApiHelper.buildWbiAccInfoParams(
                 mid = mid,
                 wWebId = renderData.accessId,
@@ -474,20 +475,58 @@ class MediaDetailService(
             ),
             referer = url
         )
-        if (resp.code != 0L) throw RuntimeException(resp.message)
-        if (resp.data == null) throw RuntimeException("获取UP信息失败")
+        if (userInfoResp.code != 0L) throw RuntimeException(userInfoResp.message)
+        if (userInfoResp.data == null) throw RuntimeException("获取UP信息失败")
+        val relationResp = apiService.relation(
+            params = BiliApiHelper.buildRelationParams(
+                fid = mid,
+                wWebId = renderData.accessId,
+                mixinKey = mixinKey,
+            ),
+            referer = url,
+        )
         val savedId = "$MEDIA_ID_USER_SPACE_PREFIX$mid"
         return MediaDetail(
             id = savedId,
-            title = resp.data.name,
+            title = userInfoResp.data.name,
             subTitle = null,
-            description = resp.data.sign,
+            description = userInfoResp.data.sign,
             detailUrl = savedId,
-            backgroundImageUrl = resp.data.face,
-            playSourceList = emptyList(),
-            favoritedMediaCard = ActionDelegate.INVALID_ACTION_SAVED_MEDIA_CARD,
+            backgroundImageUrl = userInfoResp.data.face,
+            playSourceList = buildList {
+                if (relationResp.data?.attribute == 0) {
+                    add(
+                        MediaPlaySource(
+                            id = "action",
+                            name = "操作",
+                            episodeList = listOf(
+                                MediaEpisode(
+                                    id = ActionDelegate.ACTION_USER_FOLLOW,
+                                    name = "关注",
+                                    flag5 = LenientJson.encodeToString(
+                                        UserRelationModifyParams(
+                                            fid = userInfoResp.data.mid,
+                                            act = 1,
+                                            referer = url,
+                                        )
+                                    ),
+                                )
+                            )
+                        )
+                    )
+                }
+            },
+            favoritedMediaCard = SavedMediaCard(
+                id = savedId,
+                title = "[投稿]${userInfoResp.data.name}",
+                detailUrl = savedId,
+                subTitle = "投稿视频",
+                coverImageUrl = userInfoResp.data.face,
+                cardWidth = BilibiliConst.AV_CARD_WIDTH,
+                cardHeight = BilibiliConst.AV_CARD_HEIGHT,
+            ),
             rows = getUserSpaceVideoRow(
-                mid = resp.data.mid,
+                mid = userInfoResp.data.mid,
                 wWebId = renderData.accessId,
                 mixinKey = mixinKey,
                 referer = url
@@ -545,7 +584,9 @@ class MediaDetailService(
         playSource: MediaPlaySource,
         episode: MediaEpisode
     ): MediaHttpSource {
-        return if (episode.id.startsWith(MEDIA_ID_BV_PREFIX)) {
+        return if (episode.id.startsWith(ActionDelegate.ACTION_PREFIX)) {
+            return actionDelegate.execAsGetEpisodePlayInfo(action = episode.id, data = episode.flag5)
+        } else if (episode.id.startsWith(MEDIA_ID_BV_PREFIX)) {
             return getVideoEpisodePlayInfo(episode = episode)
         } else if (episode.id.startsWith(MEDIA_ID_LIVE_ROOM_PREFIX)) {
             return getLiveEpisodePlayInfo(episode = episode)
