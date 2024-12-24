@@ -340,25 +340,28 @@ class ActionDelegate(
                 disableEpisodeProgression = true,
                 rows = listOf(
                     MediaCardRow(
-                        title = "登录动作",
+                        title = "播放进度上报设置",
                         list = listOf(
                             MediaCard(
                                 id = ACTION_VIDEO_HEARTBEAT,
-                                title = "${if (config == 0) "关闭" else "已关闭"}播放进度上报",
+                                title = "不上报进度",
+                                subTitle = "${if (config == 0) "已关闭" else "关闭"}播放进度上报",
                                 detailUrl = "$ACTION_VIDEO_HEARTBEAT:0",
-                                backgroundColor = if (config == 0) 0xFF_05_B3_73 else 0x00_00_00_00,
+                                backgroundColor = if (config == 0) 0xFF_05_B3_73 else 0xFF_6D_7B_8D,
                             ),
                             MediaCard(
                                 id = ACTION_VIDEO_HEARTBEAT,
-                                title = "${if (config == 1) "开启" else "已开启"}播放进度上报(开始播放)",
+                                title = "上报进度为开始播放",
+                                subTitle = "${if (config == 1) "已开启" else "开启"}播放进度上报",
                                 detailUrl = "$ACTION_VIDEO_HEARTBEAT:1",
-                                backgroundColor = if (config == 1) 0xFF_05_B3_73 else 0x00_00_00_00,
+                                backgroundColor = if (config == 1) 0xFF_05_B3_73 else 0xFF_6D_7B_8D,
                             ),
                             MediaCard(
                                 id = ACTION_VIDEO_HEARTBEAT,
-                                title = "${if (config == 2) "开启" else "已开启"}开启播放进度上报(播放完成)",
+                                title = "上报进度为播放结束",
+                                subTitle = "${if (config == 2) "已开启" else "开启"}播放进度上报",
                                 detailUrl = "$ACTION_VIDEO_HEARTBEAT:2",
-                                backgroundColor = if (config == 2) 0xFF_05_B3_73 else 0x00_00_00_00,
+                                backgroundColor = if (config == 2) 0xFF_05_B3_73 else 0xFF_6D_7B_8D,
                             )
                         ),
                         cardWidth = 240,
