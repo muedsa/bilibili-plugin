@@ -3,11 +3,13 @@ agp = "8.8.0"
 kotlin = "2.1.0"
 junit4 = "4.13.2"
 kotlinxCoroutinesTest = "1.10.1"
+smaliDexlib2 = "3.0.9"
 
 [libraries]
 junit4 = { group = "junit", name = "junit", version.ref = "junit4" }
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinxCoroutinesTest" }
 kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version.ref = "kotlin" }
+smali-dexlib2 = { module = "com.android.tools.smali:smali-dexlib2", version.ref = "smaliDexlib2" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
