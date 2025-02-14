@@ -38,7 +38,6 @@ import com.muedsa.tvbox.tool.get
 import com.muedsa.tvbox.tool.md5
 import com.muedsa.tvbox.tool.parseHtml
 import com.muedsa.tvbox.tool.toRequestBuild
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
 import okhttp3.OkHttpClient
@@ -101,47 +100,59 @@ class MediaDetailService(
         )
         val rows = mutableListOf<MediaCardRow>()
         if (info.pages.size > 1) {
-            rows.add(
-                MediaCardRow(
-                    title = "视频选集 (${attrs.page}/${info.pages.size})",
-                    list = info.pages.map {
-                        MediaCard(
-                            id = info.bvid,
-                            detailUrl = BiliVideoDetailUrlAttrs(
-                                bvid = info.bvid,
-                                page = it.page,
-                            ).toJsonString(),
-                            title = "${it.part} ${info.title}",
-                            subTitle = info.owner?.name ?: "",
-                            coverImageUrl = info.pic
-                        )
-                    },
-                    cardWidth = BilibiliConst.AV_CARD_WIDTH,
-                    cardHeight = BilibiliConst.AV_CARD_HEIGHT,
-                )
-            )
-        }
-        info.ugcSeason?.sections?.forEach { section ->
-            if (section.episodes.isNotEmpty()) {
-                rows.add(
+            info.pages
+                .map {
+                    MediaCard(
+                        id = info.bvid,
+                        detailUrl = BiliVideoDetailUrlAttrs(
+                            bvid = info.bvid,
+                            page = it.page,
+                        ).toJsonString(),
+                        title = "${it.part} ${info.title}",
+                        subTitle = info.owner?.name ?: "",
+                        coverImageUrl = info.pic
+                    )
+                }
+                .chunked(20)
+                .mapIndexed { index, item ->
                     MediaCardRow(
-                        title = if (info.ugcSeason.sections.size > 1) "${info.ugcSeason.title}-${section.title}" else info.ugcSeason.title,
-                        list = section.episodes.map {
-                            MediaCard(
-                                id = it.bvid,
-                                detailUrl = BiliVideoDetailUrlAttrs(
-                                    bvid = it.bvid,
-                                    page = 1,
-                                ).toJsonString(),
-                                title = it.title,
-                                subTitle = info.owner?.name ?: "",
-                                coverImageUrl = it.arc.pic,
-                            )
-                        },
+                        title = if (index == 0) "视频选集 (${attrs.page}/${info.pages.size})" else "",
+                        list = item,
                         cardWidth = BilibiliConst.AV_CARD_WIDTH,
                         cardHeight = BilibiliConst.AV_CARD_HEIGHT,
                     )
-                )
+                }
+                .let { rows.addAll(it) }
+        }
+        info.ugcSeason?.sections?.forEach { section ->
+            if (section.episodes.isNotEmpty()) {
+                section.episodes
+                    .map {
+                        MediaCard(
+                            id = it.bvid,
+                            detailUrl = BiliVideoDetailUrlAttrs(
+                                bvid = it.bvid,
+                                page = 1,
+                            ).toJsonString(),
+                            title = it.title,
+                            subTitle = info.owner?.name ?: "",
+                            coverImageUrl = it.arc.pic,
+                        )
+                    }
+                    .chunked(20)
+                    .mapIndexed { index, item ->
+                        MediaCardRow(
+                            title = if (index == 0) {
+                                if (info.ugcSeason.sections.size > 1)
+                                    "${info.ugcSeason.title}-${section.title}"
+                                else info.ugcSeason.title
+                            } else "",
+                            list = item,
+                            cardWidth = BilibiliConst.AV_CARD_WIDTH,
+                            cardHeight = BilibiliConst.AV_CARD_HEIGHT,
+                        )
+                    }
+                    .let { rows.addAll(it) }
             }
         }
         if (info.owner?.mid != null && info.owner.mid > 0) {
