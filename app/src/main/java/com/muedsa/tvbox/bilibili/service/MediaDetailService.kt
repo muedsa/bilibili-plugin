@@ -17,9 +17,11 @@ import com.muedsa.tvbox.bilibili.BILI_WBI_MIXIN_KEY
 import com.muedsa.tvbox.bilibili.BilibiliConst
 import com.muedsa.tvbox.bilibili.helper.BiliApiHelper
 import com.muedsa.tvbox.bilibili.helper.BiliCookieHelper
+import com.muedsa.tvbox.bilibili.model.BiliUseSpaceDetailUrlAttrs
 import com.muedsa.tvbox.bilibili.model.BiliVideoDetailUrlAttrs
 import com.muedsa.tvbox.bilibili.model.CoinAddParams
 import com.muedsa.tvbox.bilibili.model.HistoryToViewModifyParams
+import com.muedsa.tvbox.bilibili.model.PagedMediaCardRows
 import com.muedsa.tvbox.bilibili.model.UserRelationModifyParams
 import com.muedsa.tvbox.bilibili.model.VideoHeartbeatInfo
 import com.muedsa.tvbox.bilibili.model.bilibili.BiliResp
@@ -73,7 +75,18 @@ class MediaDetailService(
         } else if (mediaId.startsWith(MEDIA_ID_LIVE_ROOM_PREFIX)) {
             liveRoomDetail(roomId = mediaId.removePrefix(MEDIA_ID_LIVE_ROOM_PREFIX).toLong())
         } else if (mediaId.startsWith(MEDIA_ID_USER_SPACE_PREFIX)) {
-            userSpaceDetail(mid = mediaId.removePrefix(MEDIA_ID_USER_SPACE_PREFIX).toLong())
+            userSpaceDetail(
+                attrs = if (detailUrl.startsWith(MEDIA_ID_USER_SPACE_PREFIX)) {
+                    BiliUseSpaceDetailUrlAttrs(
+                        mid = mediaId.removePrefix(MEDIA_ID_USER_SPACE_PREFIX).toLong(),
+                        page = 1,
+                    )
+                } else {
+                    LenientJson.decodeFromString<BiliUseSpaceDetailUrlAttrs>(
+                        detailUrl
+                    )
+                }
+            )
         } else {
             TODO("暂不支持 $mediaId")
         }
@@ -163,7 +176,12 @@ class MediaDetailService(
                             id = userSpaceId,
                             title = "投稿视频",
                             subTitle = info.owner.name,
-                            detailUrl = userSpaceId,
+                            detailUrl = LenientJson.encodeToString(
+                                BiliUseSpaceDetailUrlAttrs(
+                                    mid = info.owner.mid,
+                                    page = 1,
+                                )
+                            ),
                             coverImageUrl = info.owner.face
                         )
                     ),
@@ -424,12 +442,17 @@ class MediaDetailService(
                             id = userSpaceId,
                             title = "投稿视频",
                             subTitle = liveUserRoomInfo.info.uname,
-                            detailUrl = userSpaceId,
+                            detailUrl = LenientJson.encodeToString(
+                                BiliUseSpaceDetailUrlAttrs(
+                                    mid = roomInfo.uid,
+                                    page = 1,
+                                )
+                            ),
                             coverImageUrl = liveUserRoomInfo.info.face,
                         )
                     ),
                     cardWidth = BilibiliConst.AVATAR_CARD_WIDTH,
-                    cardHeight = BilibiliConst.AVATAR_CARD_HEIGHT
+                    cardHeight = BilibiliConst.AVATAR_CARD_HEIGHT,
                 )
             ),
             disableEpisodeProgression = true,
@@ -476,36 +499,45 @@ class MediaDetailService(
         } else emptyList()
     }
 
-    private suspend fun userSpaceDetail(mid: Long): MediaDetail {
+    private suspend fun userSpaceDetail(attrs: BiliUseSpaceDetailUrlAttrs): MediaDetail {
         val mixinKey = store.get(BILI_WBI_MIXIN_KEY)
             ?: throw RuntimeException("WBI鉴权参数未获取")
-        val referer = "${BilibiliConst.SPACE_URL}/$mid/upload/video"
-        val userInfoResp = apiService.spaceWbiAccInfo(
-            params = BiliApiHelper.buildWbiAccInfoParams(
-                mid = mid,
-                mixinKey = mixinKey,
-            ),
-            referer = referer
-        )
-        if (userInfoResp.code != 0L) throw RuntimeException(userInfoResp.message)
-        if (userInfoResp.data == null) throw RuntimeException("获取UP信息失败")
-        val relationResp = apiService.relation(
-            params = BiliApiHelper.buildRelationParams(
-                fid = mid,
-                mixinKey = mixinKey,
-            ),
-            referer = referer,
-        )
-        val savedId = "$MEDIA_ID_USER_SPACE_PREFIX$mid"
+        val referer = "${BilibiliConst.SPACE_URL}/${attrs.mid}/upload/video"
+        var spaceUserInfo = attrs.spaceUserInfo
+        var relation = attrs.relation
+        if (spaceUserInfo == null) {
+            val userInfoResp = apiService.spaceWbiAccInfo(
+                params = BiliApiHelper.buildWbiAccInfoParams(
+                    mid = attrs.mid,
+                    mixinKey = mixinKey,
+                ),
+                referer = referer
+            )
+            if (userInfoResp.code != 0L) throw RuntimeException(userInfoResp.message)
+            if (userInfoResp.data == null) throw RuntimeException("获取UP信息失败")
+            spaceUserInfo = userInfoResp.data
+        }
+        if (relation == null) {
+            val relationResp = apiService.relation(
+                params = BiliApiHelper.buildRelationParams(
+                    fid = attrs.mid,
+                    mixinKey = mixinKey,
+                ),
+                referer = referer,
+            )
+            relation = relationResp.data?.attribute
+        }
+
+        val savedId = "$MEDIA_ID_USER_SPACE_PREFIX${attrs.mid}"
         return MediaDetail(
             id = savedId,
-            title = userInfoResp.data.name,
+            title = spaceUserInfo.name,
             subTitle = null,
-            description = userInfoResp.data.sign,
+            description = spaceUserInfo.sign,
             detailUrl = savedId,
-            backgroundImageUrl = userInfoResp.data.face,
+            backgroundImageUrl = spaceUserInfo.face,
             playSourceList = buildList {
-                if (relationResp.data?.attribute == 0) {
+                if (relation == 0) {
                     add(
                         MediaPlaySource(
                             id = "action",
@@ -516,7 +548,7 @@ class MediaDetailService(
                                     name = "关注",
                                     flag5 = LenientJson.encodeToString(
                                         UserRelationModifyParams(
-                                            fid = userInfoResp.data.mid,
+                                            fid = spaceUserInfo.mid,
                                             act = 1,
                                             referer = referer,
                                         )
@@ -529,18 +561,50 @@ class MediaDetailService(
             },
             favoritedMediaCard = SavedMediaCard(
                 id = savedId,
-                title = "[投稿]${userInfoResp.data.name}",
-                detailUrl = savedId,
+                title = "[投稿]${spaceUserInfo.name}",
+                detailUrl = LenientJson.encodeToString(
+                    BiliUseSpaceDetailUrlAttrs(
+                        mid = spaceUserInfo.mid,
+                        page = 1,
+                    )
+                ),
                 subTitle = "投稿视频",
-                coverImageUrl = userInfoResp.data.face,
+                coverImageUrl = spaceUserInfo.face,
                 cardWidth = BilibiliConst.AV_CARD_WIDTH,
                 cardHeight = BilibiliConst.AV_CARD_HEIGHT,
             ),
-            rows = getUserSpaceVideoRow(
-                mid = userInfoResp.data.mid,
-                mixinKey = mixinKey,
-                referer = referer
-            ),
+            rows = buildList {
+                val pagedMediaCardRows = getUserSpaceVideoRow(
+                    mid = spaceUserInfo.mid,
+                    mixinKey = mixinKey,
+                    referer = referer,
+                    appPage = attrs.page,
+                )
+                addAll(pagedMediaCardRows.rows)
+                if (pagedMediaCardRows.totalPage > attrs.page) {
+                    add(
+                        MediaCardRow(
+                            title = "操作",
+                            list = listOf(
+                                MediaCard(
+                                    id = savedId,
+                                    title = "更多投稿视频",
+                                    subTitle = spaceUserInfo.name,
+                                    detailUrl = LenientJson.encodeToString(
+                                        BiliUseSpaceDetailUrlAttrs(
+                                            mid = spaceUserInfo.mid,
+                                            page = attrs.page + 1,
+                                        )
+                                    ),
+                                    coverImageUrl = spaceUserInfo.face,
+                                )
+                            ),
+                            cardWidth = BilibiliConst.AVATAR_CARD_WIDTH,
+                            cardHeight = BilibiliConst.AVATAR_CARD_WIDTH,
+                        )
+                    )
+                }
+            },
             disableEpisodeProgression = true
         )
     }
@@ -549,10 +613,13 @@ class MediaDetailService(
         mid: Long,
         mixinKey: String,
         referer: String,
-    ): List<MediaCardRow> {
+        appPage: Int = 1,
+    ): PagedMediaCardRows {
         val rows = mutableListOf<MediaCardRow>()
-        var page = 1
-        while (page < 10) {
+        var page = ((appPage - 1) * USER_SPACE_VIDEO_ROW_COUNT) + 1
+        val maxPage = page + USER_SPACE_VIDEO_ROW_COUNT
+        var count = 0
+        while (page < maxPage) {
             val params = BiliApiHelper.buildWbiArcSearchParams(
                 page = page,
                 pageSize = USER_SPACE_VIDEO_ROW_SIZE,
@@ -582,10 +649,15 @@ class MediaDetailService(
                     cardHeight = BilibiliConst.AV_CARD_HEIGHT,
                 )
             )
+            count = resp.data.page.count
             if (page * USER_SPACE_VIDEO_ROW_SIZE > resp.data.page.count) break
             page++
         }
-        return rows
+        return PagedMediaCardRows(
+            count = count,
+            totalPage = ceil(count * 1.0 / (USER_SPACE_VIDEO_ROW_SIZE * USER_SPACE_VIDEO_ROW_COUNT)).toInt(),
+            rows = rows,
+        )
     }
 
     override suspend fun getEpisodePlayInfo(
@@ -759,7 +831,8 @@ class MediaDetailService(
                 name = "获取播放地址被风控, 需要人机验证",
             )
         )
-        const val USER_SPACE_VIDEO_ROW_SIZE = 30
+        const val USER_SPACE_VIDEO_ROW_SIZE = 42
+        const val USER_SPACE_VIDEO_ROW_COUNT = 10
         val PLAY_URL_REGEX = "<script>window\\.__playinfo__=(\\{.*?\\})</script>".toRegex()
         val PLAY_URL_SSR_DATA_REGEX = "const playurlSSRData = (\\{.*?\\}\n)".toRegex()
     }
