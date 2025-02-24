@@ -17,7 +17,6 @@ import com.muedsa.tvbox.bilibili.BILI_WBI_MIXIN_KEY
 import com.muedsa.tvbox.bilibili.BilibiliConst
 import com.muedsa.tvbox.bilibili.helper.BiliApiHelper
 import com.muedsa.tvbox.bilibili.helper.BiliCookieHelper
-import com.muedsa.tvbox.bilibili.helper.WBIHelper.decodeURIComponent
 import com.muedsa.tvbox.bilibili.model.BiliVideoDetailUrlAttrs
 import com.muedsa.tvbox.bilibili.model.CoinAddParams
 import com.muedsa.tvbox.bilibili.model.HistoryToViewModifyParams
@@ -27,7 +26,6 @@ import com.muedsa.tvbox.bilibili.model.bilibili.BiliResp
 import com.muedsa.tvbox.bilibili.model.bilibili.LiveUserRoomInfo
 import com.muedsa.tvbox.bilibili.model.bilibili.PlayUrl
 import com.muedsa.tvbox.bilibili.model.bilibili.RoomInfo
-import com.muedsa.tvbox.bilibili.model.bilibili.UserSpaceRenderData
 import com.muedsa.tvbox.bilibili.model.bilibili.VideoDetail
 import com.muedsa.tvbox.bilibili.model.bilibili.VideoPage
 import com.muedsa.tvbox.tool.ChromeUserAgent
@@ -481,34 +479,22 @@ class MediaDetailService(
     private suspend fun userSpaceDetail(mid: Long): MediaDetail {
         val mixinKey = store.get(BILI_WBI_MIXIN_KEY)
             ?: throw RuntimeException("WBI鉴权参数未获取")
-        val url =
-            "${BilibiliConst.SPACE_URL}/$mid/video?tid=0&special_type=&pn=1&keyword=&order=pubdate"
-        val head = url.toRequestBuild()
-            .feignChrome()
-            .get(okHttpClient = okHttpClient)
-            .parseHtml()
-            .head()
-        val html = head.selectFirst("#__RENDER_DATA__")?.html()
-            ?: throw RuntimeException("获取access_id失败")
-        val renderData =
-            LenientJson.decodeFromString<UserSpaceRenderData>(html.decodeURIComponent())
+        val referer = "${BilibiliConst.SPACE_URL}/$mid/upload/video"
         val userInfoResp = apiService.spaceWbiAccInfo(
             params = BiliApiHelper.buildWbiAccInfoParams(
                 mid = mid,
-                wWebId = renderData.accessId,
                 mixinKey = mixinKey,
             ),
-            referer = url
+            referer = referer
         )
         if (userInfoResp.code != 0L) throw RuntimeException(userInfoResp.message)
         if (userInfoResp.data == null) throw RuntimeException("获取UP信息失败")
         val relationResp = apiService.relation(
             params = BiliApiHelper.buildRelationParams(
                 fid = mid,
-                wWebId = renderData.accessId,
                 mixinKey = mixinKey,
             ),
-            referer = url,
+            referer = referer,
         )
         val savedId = "$MEDIA_ID_USER_SPACE_PREFIX$mid"
         return MediaDetail(
@@ -532,7 +518,7 @@ class MediaDetailService(
                                         UserRelationModifyParams(
                                             fid = userInfoResp.data.mid,
                                             act = 1,
-                                            referer = url,
+                                            referer = referer,
                                         )
                                     ),
                                 )
@@ -552,9 +538,8 @@ class MediaDetailService(
             ),
             rows = getUserSpaceVideoRow(
                 mid = userInfoResp.data.mid,
-                wWebId = renderData.accessId,
                 mixinKey = mixinKey,
-                referer = url
+                referer = referer
             ),
             disableEpisodeProgression = true
         )
@@ -562,7 +547,6 @@ class MediaDetailService(
 
     private suspend fun getUserSpaceVideoRow(
         mid: Long,
-        wWebId: String,
         mixinKey: String,
         referer: String,
     ): List<MediaCardRow> {
@@ -573,7 +557,6 @@ class MediaDetailService(
                 page = page,
                 pageSize = USER_SPACE_VIDEO_ROW_SIZE,
                 mid = mid,
-                wWebId = wWebId,
                 mixinKey = mixinKey
             )
             val resp = apiService.spaceWbiArcSearch(params = params, referer = referer)

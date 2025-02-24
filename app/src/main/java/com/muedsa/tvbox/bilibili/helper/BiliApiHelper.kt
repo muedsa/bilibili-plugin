@@ -106,7 +106,6 @@ object BiliApiHelper {
 
     fun buildWbiAccInfoParams(
         mid: Long,
-        wWebId: String,
         mixinKey: String,
     ): MutableMap<String, String> {
         val params = mutableMapOf<String, String>(
@@ -118,7 +117,6 @@ object BiliApiHelper {
             "dm_img_str" to DM_IMG_STR,
             "dm_cover_img_str" to DM_COVER_IMG_STR,
             "dm_img_inter" to "{\"ds\":[],\"wh\":[5711,6772,11],\"of\":[245,490,245]}",
-            "w_webid" to wWebId,
         )
         WBIHelper.fillWbiParams(params = params, mixinKey = mixinKey)
         return params
@@ -126,9 +124,8 @@ object BiliApiHelper {
 
     fun buildWbiArcSearchParams(
         page: Int = 1,
-        pageSize: Int = 30,
+        pageSize: Int = 42,
         mid: Long,
-        wWebId: String,
         mixinKey: String,
     ): MutableMap<String, String> {
         val params = mutableMapOf<String, String>(
@@ -145,7 +142,6 @@ object BiliApiHelper {
             "dm_img_str" to DM_IMG_STR,
             "dm_cover_img_str" to DM_COVER_IMG_STR,
             "dm_img_inter" to "{\"ds\":[{\"t\":2,\"c\":\"Y2xlYXJmaXggZy1zZWFyY2ggc2VhcmNoLWNvbnRhaW5lcg\",\"p\":[2106,28,387],\"s\":[234,696,884]},{\"t\":2,\"c\":\"d3JhcHBlcg\",\"p\":[1407,41,1059],\"s\":[510,5035,4800]}],\"wh\":[5690,6765,4],\"of\":[418,836,418]}",
-            "w_webid" to wWebId,
         )
         WBIHelper.fillWbiParams(params = params, mixinKey = mixinKey)
         return params
@@ -195,13 +191,11 @@ object BiliApiHelper {
 
     fun buildRelationParams(
         fid: Long,
-        wWebId: String,
         mixinKey: String,
     ): MutableMap<String, String> {
         val params = mutableMapOf<String, String>(
             "fid" to "$fid",
-            "web_location" to "333.999",
-            "w_webid" to wWebId,
+            "web_location" to "333.999"
         )
         WBIHelper.fillWbiParams(params = params, mixinKey = mixinKey)
         return params
