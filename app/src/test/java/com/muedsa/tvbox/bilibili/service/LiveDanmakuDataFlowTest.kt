@@ -1,9 +1,12 @@
 package com.muedsa.tvbox.bilibili.service
 
+import com.muedsa.tvbox.bilibili.BILI_WBI_MIXIN_KEY
 import com.muedsa.tvbox.bilibili.BilibiliConst
 import com.muedsa.tvbox.bilibili.TestCookieSaver
 import com.muedsa.tvbox.bilibili.TestOkHttpClient
+import com.muedsa.tvbox.bilibili.TestPluginPrefStore
 import com.muedsa.tvbox.bilibili.TimberUnitTestTree
+import com.muedsa.tvbox.bilibili.helper.BiliApiHelper
 import com.muedsa.tvbox.bilibili.helper.BiliCookieHelper
 import com.muedsa.tvbox.bilibili.helper.LiveChatPacketUtil
 import com.muedsa.tvbox.tool.ChromeUserAgent
@@ -29,7 +32,14 @@ class LiveDanmakuDataFlowTest {
     fun test() {
         val roomId = 7734200L
         runBlocking {
-            val resp = liveApiService.getDanmuInfo(id = roomId)
+            val mixinKey = TestPluginPrefStore.get(BILI_WBI_MIXIN_KEY)
+                ?: throw RuntimeException("WBI鉴权参数未获取")
+            val resp = liveApiService.getDanmuInfo(
+                params = BiliApiHelper.buildGetDanmuInfoParams(
+                    id = roomId,
+                    mixinKey = mixinKey,
+                ),
+            )
             check(resp.data != null)
             val hostInfo = resp.data.hostList.first()
             Timber.i("LiveDanmakuDataFlow start")

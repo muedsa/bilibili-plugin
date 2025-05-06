@@ -11,6 +11,7 @@ import com.muedsa.tvbox.tool.ChromeUserAgent
 import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.Query
+import retrofit2.http.QueryMap
 
 interface BilibiliLiveApiService {
 
@@ -53,7 +54,7 @@ interface BilibiliLiveApiService {
 
     @GET("xlive/web-room/v1/index/getDanmuInfo")
     suspend fun getDanmuInfo(
-        @Query("id") id: Long,
-        @Query("type") type: Int = 0,
+        @QueryMap params: Map<String, String>,
+        @Header("User-Agent") userAgent: String = ChromeUserAgent,
     ): BiliResp<DanmakuInfo>
 }

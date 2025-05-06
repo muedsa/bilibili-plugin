@@ -790,8 +790,14 @@ class MediaDetailService(
 
     override suspend fun getEpisodeDanmakuDataFlow(episode: MediaEpisode): DanmakuDataFlow? {
         return if (episode.id.startsWith(MEDIA_ID_LIVE_ROOM_PREFIX)) {
+            val mixinKey = store.get(BILI_WBI_MIXIN_KEY) ?: return null
             val roomId = episode.flag3 ?: throw RuntimeException("")
-            val resp = liveApiService.getDanmuInfo(id = roomId)
+            val resp = liveApiService.getDanmuInfo(
+                params = BiliApiHelper.buildGetDanmuInfoParams(
+                    id = roomId,
+                    mixinKey = mixinKey,
+                ),
+            )
             if (resp.code != 0L || resp.data == null) {
                 Timber.e("获取直播间弹幕TOKEN失败: $resp")
                 null

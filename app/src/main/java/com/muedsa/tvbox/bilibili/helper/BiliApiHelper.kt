@@ -21,7 +21,7 @@ object BiliApiHelper {
         lastShowList: String = "",
         mixinKey: String
     ): MutableMap<String, String> {
-        val params = mutableMapOf<String, String>(
+        val params = mutableMapOf(
             "fresh_type" to "4",
             "ps" to "30",
             "fresh_idx" to "$index",
@@ -51,7 +51,7 @@ object BiliApiHelper {
         session: String,
         mixinKey: String,
     ):  MutableMap<String, String> {
-        val params = mutableMapOf<String, String>(
+        val params = mutableMapOf(
             "aid" to "$aid",
             "bvid" to bvid,
             "cid" to "$cid",
@@ -82,7 +82,7 @@ object BiliApiHelper {
         searchType: String,
         mixinKey: String,
     ): MutableMap<String, String> {
-        val params = mutableMapOf<String, String>(
+        val params = mutableMapOf(
             "search_type" to searchType,
             "keyword" to keyword,
         )
@@ -95,7 +95,7 @@ object BiliApiHelper {
         pageSize: Int = 20,
         mixinKey: String
     ): MutableMap<String, String> {
-        val params = mutableMapOf<String, String>(
+        val params = mutableMapOf(
             "pn" to "$page",
             "ps" to "$pageSize",
             "web_location" to "333.934",
@@ -108,7 +108,7 @@ object BiliApiHelper {
         mid: Long,
         mixinKey: String,
     ): MutableMap<String, String> {
-        val params = mutableMapOf<String, String>(
+        val params = mutableMapOf(
             "mid" to "$mid",
             "token" to "",
             "platform" to "web",
@@ -128,7 +128,7 @@ object BiliApiHelper {
         mid: Long,
         mixinKey: String,
     ): MutableMap<String, String> {
-        val params = mutableMapOf<String, String>(
+        val params = mutableMapOf(
             "mid" to "$mid",
             "ps" to "$pageSize",
             "tid" to "0",
@@ -152,7 +152,7 @@ object BiliApiHelper {
         segmentIndex: Int,
         mixinKey: String,
     ): MutableMap<String, String> {
-        val params = mutableMapOf<String, String>(
+        val params = mutableMapOf(
             "type" to "1",
             "oid" to "$oid",
             "segment_index" to "$segmentIndex",
@@ -173,7 +173,7 @@ object BiliApiHelper {
         lastPlayProgressTime: Long,
         mixinKey: String,
     ): MutableMap<String, String> {
-        val params = mutableMapOf<String, String>(
+        val params = mutableMapOf(
             "w_start_ts" to "$startTs",
             "w_mid" to "$mid",
             "w_aid" to "$aid",
@@ -193,9 +193,22 @@ object BiliApiHelper {
         fid: Long,
         mixinKey: String,
     ): MutableMap<String, String> {
-        val params = mutableMapOf<String, String>(
+        val params = mutableMapOf(
             "fid" to "$fid",
-            "web_location" to "333.999"
+            "web_location" to "333.999",
+        )
+        WBIHelper.fillWbiParams(params = params, mixinKey = mixinKey)
+        return params
+    }
+
+    fun buildGetDanmuInfoParams(
+        id: Long,
+        type: Int = 0,
+        mixinKey: String,
+    ): MutableMap<String, String> {
+        val params = mutableMapOf(
+            "id" to "$id",
+            "type" to "$type",
         )
         WBIHelper.fillWbiParams(params = params, mixinKey = mixinKey)
         return params
