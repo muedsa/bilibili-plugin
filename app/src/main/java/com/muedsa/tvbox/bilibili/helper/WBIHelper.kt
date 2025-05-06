@@ -38,7 +38,7 @@ object WBIHelper {
 
     @OptIn(ExperimentalStdlibApi::class)
     fun fillWbiParams(params: MutableMap<String, String>, mixinKey: String) {
-        params[QUERY_KEY_WTS] = (System.currentTimeMillis() / 1000).toHexString()
+        params[QUERY_KEY_WTS] = (System.currentTimeMillis() / 1000).toString()
         val sortedParams = stringSortedParams(params) + mixinKey
         val md5Bytes = sortedParams.md5()
         val hexEncoded = md5Bytes.toHexString()
