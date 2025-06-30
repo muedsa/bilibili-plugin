@@ -295,7 +295,7 @@ class MediaDetailService(
             }
         }
         Timber.d("playUrlFromHtml=$playUrlJson")
-        val resp: BiliResp<PlayUrl> = if (playUrlJson.isNullOrEmpty()) {
+        val resp: BiliResp<PlayUrl> = if (playUrlJson.isNullOrEmpty() || pageInfo.page > 1) {
             // 尝试从SSR页面获取失败, 从接口请求获取
             val b3 = BiliCookieHelper.getCookeValue(cookieSaver = cookieSaver, cookieName = BiliCookieHelper.COOKIE_B_3)
             val session = "$b3${System.currentTimeMillis()}".md5().toHexString()
@@ -665,11 +665,11 @@ class MediaDetailService(
         episode: MediaEpisode
     ): MediaHttpSource {
         return if (episode.id.startsWith(ActionDelegate.ACTION_PREFIX)) {
-            return actionDelegate.execAsGetEpisodePlayInfo(action = episode.id, data = episode.flag5)
+            actionDelegate.execAsGetEpisodePlayInfo(action = episode.id, data = episode.flag5)
         } else if (episode.id.startsWith(MEDIA_ID_BV_PREFIX)) {
-            return getVideoEpisodePlayInfo(episode = episode)
+            getVideoEpisodePlayInfo(episode = episode)
         } else if (episode.id.startsWith(MEDIA_ID_LIVE_ROOM_PREFIX)) {
-            return getLiveEpisodePlayInfo(episode = episode)
+            getLiveEpisodePlayInfo(episode = episode)
         } else {
             TODO("暂不支持的类型 ${episode.id}")
         }
