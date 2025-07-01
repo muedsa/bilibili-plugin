@@ -423,14 +423,14 @@ class MediaDetailService(
                 }
             }.joinToString(" | ") + "\n\n${roomInfo.description}",
             detailUrl = savedId,
-            backgroundImageUrl = if(roomInfo.keyframe.isNotBlank()) roomInfo.keyframe else roomInfo.userCover,
+            backgroundImageUrl = roomInfo.keyframe.ifBlank { roomInfo.userCover },
             playSourceList = createLiveRoomPlaySource(roomInfo = roomInfo),
             favoritedMediaCard = SavedMediaCard(
                 id = savedId,
                 title = roomInfo.title,
                 subTitle = "[直播]${liveUserRoomInfo.info.uname}",
                 detailUrl = savedId,
-                coverImageUrl = if (roomInfo.userCover.isNotBlank()) roomInfo.userCover else roomInfo.keyframe,
+                coverImageUrl = roomInfo.userCover.ifBlank { roomInfo.keyframe },
                 cardWidth = BilibiliConst.AV_CARD_WIDTH,
                 cardHeight = BilibiliConst.AV_CARD_HEIGHT,
             ),
@@ -490,7 +490,7 @@ class MediaDetailService(
                         episodeList = listOf(
                             MediaEpisode(
                                 id = "$MEDIA_ID_LIVE_ROOM_PREFIX${roomInfo.roomId}",
-                                name = if (resp.message.isNotBlank()) resp.message else "获取直播地址失败",
+                                name = resp.message.ifBlank { "获取直播地址失败" },
                             )
                         )
                     )
