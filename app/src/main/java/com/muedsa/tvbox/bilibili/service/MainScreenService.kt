@@ -39,6 +39,7 @@ class MainScreenService(
     private val apiService: BilibiliApiService,
     private val liveApiService: BilibiliLiveApiService,
     private val passportService: BilibiliPassportService,
+    private val debug: Boolean = false,
 ) : IMainScreenService {
 
     var loginState: LoginState = LoginState.NotLogin
@@ -56,6 +57,7 @@ class MainScreenService(
                 async(Dispatchers.IO) { getLiveHistoryRow() },          // 历史记录-直播
                 async(Dispatchers.IO) { getHistoryToViewRow() },        // 稍后再看
                 async(Dispatchers.IO) { getLoginInfoRow() },            // 个人信息
+                async(Dispatchers.IO) { getDebugRow() },                // DEBUG
             ).awaitAll().filterNotNull()
         }
     }
@@ -529,4 +531,12 @@ class MainScreenService(
             }
         }
     }
+
+    private fun getDebugRow(): MediaCardRow? = if (debug) MediaCardRow(
+        title = "DEBUG",
+        list = listOf(ActionDelegate.DEBUG_STORE_ACTION_CARD),
+        cardWidth = BilibiliConst.BUTTON_CARD_WIDTH,
+        cardHeight = BilibiliConst.BUTTON_CARD_HEIGHT,
+        cardType = MediaCardType.NOT_IMAGE
+    ) else null
 }

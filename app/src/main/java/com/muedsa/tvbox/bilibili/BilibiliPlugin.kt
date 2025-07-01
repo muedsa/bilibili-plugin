@@ -74,6 +74,7 @@ class BilibiliPlugin(tvBoxContext: TvBoxContext) : IPlugin(tvBoxContext = tvBoxC
             apiService = bilibiliApiService,
             liveApiService = bilibiliLiveApiService,
             passportService = bilibiliPassportService,
+            debug = tvBoxContext.debug,
         )
     }
     private val mediaDetailService by lazy {
@@ -85,7 +86,7 @@ class BilibiliPlugin(tvBoxContext: TvBoxContext) : IPlugin(tvBoxContext = tvBoxC
             apiService = bilibiliApiService,
             liveApiService = bilibiliLiveApiService,
             apiGrpcService = bilibiliApiGrpcService,
-            debug = tvBoxContext.debug
+            debug = tvBoxContext.debug,
         )
     }
     private val mediaSearchService by lazy {

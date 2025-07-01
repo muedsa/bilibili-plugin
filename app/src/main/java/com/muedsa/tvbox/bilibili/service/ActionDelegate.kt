@@ -10,6 +10,7 @@ import com.muedsa.tvbox.bilibili.BILI_REFRESH_TOKEN_KEY
 import com.muedsa.tvbox.bilibili.BILI_VIDEO_HEARTBEAT
 import com.muedsa.tvbox.bilibili.BilibiliConst
 import com.muedsa.tvbox.bilibili.helper.BiliCookieHelper
+import com.muedsa.tvbox.bilibili.helper.DebugHelper
 import com.muedsa.tvbox.bilibili.model.CoinAddParams
 import com.muedsa.tvbox.bilibili.model.HistoryToViewModifyParams
 import com.muedsa.tvbox.bilibili.model.LoginState
@@ -21,7 +22,6 @@ import com.muedsa.tvbox.tool.feignChrome
 import com.muedsa.tvbox.tool.get
 import com.muedsa.tvbox.tool.parseHtml
 import com.muedsa.tvbox.tool.toRequestBuild
-import kotlinx.serialization.encodeToString
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
 import timber.log.Timber
@@ -57,6 +57,11 @@ class ActionDelegate(
             }
 
             ACTION_INVALID -> throw IllegalArgumentException("这是一个动作卡片,请删除")
+
+            ACTION_DEBUG_STORE -> {
+                Timber.i(DebugHelper.toJsonStr(store))
+                throw IllegalArgumentException("DEBUG STORE")
+            }
 
             else -> throw IllegalArgumentException("未知动作")
         }
@@ -242,6 +247,7 @@ class ActionDelegate(
     companion object {
         const val ACTION_PREFIX = "action_"
         const val ACTION_INVALID = "${ACTION_PREFIX}invalid"
+        const val ACTION_DEBUG_STORE = "${ACTION_PREFIX}debug_store"
         const val ACTION_QRCODE_LOGIN = "${ACTION_PREFIX}qrcode_login"
         const val ACTION_QRCODE_LOGIN_POLL = "${ACTION_PREFIX}qrcode_login_poll"
         const val ACTION_LOGOUT = "${ACTION_PREFIX}logout"
@@ -378,6 +384,13 @@ class ActionDelegate(
             subTitle = "设置视频进度上报",
             detailUrl = ACTION_VIDEO_HEARTBEAT,
             coverImageUrl = "https://i0.hdslb.com/bfs/creative/23f832f985f4af14863a0a3d304f6fbfa0d61173.png@328w_185h.png"
+        )
+
+        val DEBUG_STORE_ACTION_CARD = MediaCard(
+            id = ACTION_DEBUG_STORE,
+            title = "DEBUG STORE",
+            subTitle = "打印Store",
+            detailUrl = ACTION_DEBUG_STORE,
         )
     }
 }
