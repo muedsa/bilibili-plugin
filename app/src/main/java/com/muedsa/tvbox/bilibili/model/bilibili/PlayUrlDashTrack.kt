@@ -16,6 +16,6 @@ data class PlayUrlDashTrack(
     val frameRate: String = "",
     val sar: String = "",
     val startWithSap: Int = 0,
-    @SerialName("SegmentBase") val segmentBase: DashTrackSegmentBase,
+    @SerialName("SegmentBase") val segmentBase: DashTrackSegmentBase? = null,
     @SerialName("codecid") val codecId: Int = 0
 )
