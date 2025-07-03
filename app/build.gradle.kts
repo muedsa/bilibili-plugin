@@ -25,8 +25,8 @@ android {
         applicationId = "com.muedsa.tvbox.bilibili"
         minSdk = 24
         targetSdk = 35
-        versionCode = 17
-        versionName = "0.1.6"
+        versionCode = 18
+        versionName = "0.1.7"
     }
 
     signingConfigs {
