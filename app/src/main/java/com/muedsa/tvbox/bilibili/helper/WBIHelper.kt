@@ -28,7 +28,7 @@ object WBIHelper {
         val param = params.entries.sortedBy { it.key }.joinToString("&") {
             "${it.key.encodeURIComponent()}=${it.value.encodeURIComponent()}"
         }
-        return param.toString()
+        return param
     }
 
     fun fillWbiParams(params: MutableMap<String, String>, imgKey: String, subKey: String) {
