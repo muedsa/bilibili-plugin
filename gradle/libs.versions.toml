@@ -1,11 +1,13 @@
 [versions]
-agp = "8.13.1"
-kotlin = "2.1.10"
+agp = "8.13.2"
+kotlin = "2.3.10"
+tvboxApi = "12.1.0"
 junit4 = "4.13.2"
-kotlinxCoroutinesTest = "1.10.1"
+kotlinxCoroutinesTest = "1.10.2"
 smaliDexlib2 = "3.0.9"
 
 [libraries]
+tvbox-api = { module = "com.muedsa.tvbox:api", version.ref = "tvboxApi" }
 junit4 = { group = "junit", name = "junit", version.ref = "junit4" }
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinxCoroutinesTest" }
 kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version.ref = "kotlin" }
