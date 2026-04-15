@@ -27,4 +27,6 @@ object BilibiliConst {
 
     const val IMAGE_NO_SIGNAL = "https://i0.hdslb.com/bfs/creative/23f832f985f4af14863a0a3d304f6fbfa0d61173.png"
     const val IMAGE_NO_COVER = "https://i0.hdslb.com/bfs/live/b52278030abd523ea9104ab1ded386b68c286363.png"
+
+    const val BSB_URL = "https://bsbsb.top"
 }

@@ -12,6 +12,7 @@ import com.muedsa.tvbox.bilibili.service.BilibiliApiGrpcService
 import com.muedsa.tvbox.bilibili.service.BilibiliApiService
 import com.muedsa.tvbox.bilibili.service.BilibiliLiveApiService
 import com.muedsa.tvbox.bilibili.service.BilibiliPassportService
+import com.muedsa.tvbox.bilibili.service.BilibiliSponsorBlockService
 import com.muedsa.tvbox.bilibili.service.MainScreenService
 import com.muedsa.tvbox.bilibili.service.MediaCatalogService
 import com.muedsa.tvbox.bilibili.service.MediaDetailService
@@ -66,6 +67,13 @@ class BilibiliPlugin(tvBoxContext: TvBoxContext) : IPlugin(tvBoxContext = tvBoxC
             .build()
             .create(BilibiliApiGrpcService::class.java)
     }
+    private val bilibiliSponsorBlockService by lazy {
+        createJsonRetrofit(
+            baseUrl = "${BilibiliConst.BSB_URL}/",
+            service = BilibiliSponsorBlockService::class.java,
+            okHttpClient = okHttpClient
+        )
+    }
     private val mainScreenService by lazy {
         MainScreenService(
             store = store,
@@ -86,6 +94,7 @@ class BilibiliPlugin(tvBoxContext: TvBoxContext) : IPlugin(tvBoxContext = tvBoxC
             apiService = bilibiliApiService,
             liveApiService = bilibiliLiveApiService,
             apiGrpcService = bilibiliApiGrpcService,
+            bsbService = bilibiliSponsorBlockService,
             debug = tvBoxContext.debug,
         )
     }

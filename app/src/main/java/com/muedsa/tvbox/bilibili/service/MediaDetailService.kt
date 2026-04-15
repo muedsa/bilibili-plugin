@@ -56,6 +56,7 @@ class MediaDetailService(
     private val apiService: BilibiliApiService,
     private val liveApiService: BilibiliLiveApiService,
     private val apiGrpcService: BilibiliApiGrpcService,
+    private val bsbService: BilibiliSponsorBlockService,
     private val debug: Boolean = false,
 ) : IMediaDetailService {
 
@@ -731,10 +732,21 @@ class MediaDetailService(
                 )
             }
         }
+        var skipSegments: List<Pair<Long, Long>>? = null
+        try {
+            val bsbSegments = bsbService.skipSegments(videoID = bvid, cid = episode.flag3!!)
+            skipSegments =
+                bsbSegments.map { (it.segment[0] * 1000).toLong() to (it.segment[1] * 1000).toLong() }
+        } catch (_: Throwable) {
+        }
         return if (audioUrl.isNullOrEmpty()) {
-            MediaHttpSource(url = videoUrl, httpHeaders = headers)
+            MediaHttpSource(url = videoUrl, httpHeaders = headers, skipSegments = skipSegments)
         } else {
-            MediaMergingHttpSource(urls = listOf(videoUrl, audioUrl), httpHeaders = headers)
+            MediaMergingHttpSource(
+                urls = listOf(videoUrl, audioUrl),
+                httpHeaders = headers,
+                skipSegments = skipSegments
+            )
         }
     }
 
