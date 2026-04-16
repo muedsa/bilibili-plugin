@@ -23,7 +23,10 @@ object BilibiliConst {
 
     const val CMD_DANMU_MSG = "DANMU_MSG"
     const val CMD_SUPER_CHAT_MESSAGE = "SUPER_CHAT_MESSAGE"
+    const val CMD_LIVE_OPEN_PLATFORM_SUPER_CHAT = "LIVE_OPEN_PLATFORM_SUPER_CHAT"
     const val CMD_DM_INTERACTION = "DM_INTERACTION"
+    const val CMD_WARNING = "WARNING"
+    const val CMD_CUT_OFF = "CUT_OFF"
 
     const val IMAGE_NO_SIGNAL = "https://i0.hdslb.com/bfs/creative/23f832f985f4af14863a0a3d304f6fbfa0d61173.png"
     const val IMAGE_NO_COVER = "https://i0.hdslb.com/bfs/live/b52278030abd523ea9104ab1ded386b68c286363.png"

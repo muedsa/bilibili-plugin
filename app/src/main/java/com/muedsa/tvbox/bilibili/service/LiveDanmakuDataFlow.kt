@@ -126,11 +126,11 @@ class LiveDanmakuDataFlow(
                                                         dataJsonObject["message"]!!.jsonPrimitive
                                                             .content
                                                     val messageFontColor =
-                                                        dataJsonObject["message_font_color"]!!
-                                                            .jsonPrimitive
-                                                            .content
-                                                            .removePrefix("#")
-                                                            .hexToInt()
+                                                        dataJsonObject["message_font_color"]
+                                                            ?.jsonPrimitive
+                                                            ?.content
+                                                            ?.removePrefix("#")
+                                                            ?.hexToInt() ?: 0xFF_FF_FF
                                                     listOf(
                                                         DanmakuData(
                                                             danmakuId = dataJsonObject["id"]!!
@@ -142,8 +142,37 @@ class LiveDanmakuDataFlow(
                                                             mode = 4,
                                                         )
                                                     )
-                                                }
-                                                null
+                                                } else null
+                                            }
+
+                                            BilibiliConst.CMD_LIVE_OPEN_PLATFORM_SUPER_CHAT -> {
+                                                val dataJsonObject =
+                                                    jsonElement.jsonObject["data"]?.jsonObject
+                                                if (!dataJsonObject.isNullOrEmpty()) {
+                                                    val price =
+                                                        dataJsonObject["rmb"]!!.jsonPrimitive
+                                                            .content
+                                                    val message =
+                                                        dataJsonObject["message"]!!.jsonPrimitive
+                                                            .content
+                                                    val messageFontColor =
+                                                        dataJsonObject["message_font_color"]
+                                                            ?.jsonPrimitive
+                                                            ?.content
+                                                            ?.removePrefix("#")
+                                                            ?.hexToInt() ?: 0xFF_FF_FF
+                                                    listOf(
+                                                        DanmakuData(
+                                                            danmakuId = dataJsonObject["msg_id"]!!
+                                                                .jsonPrimitive
+                                                                .long,
+                                                            position = -1,
+                                                            content = "[SC-￥$price]$message",
+                                                            textColor = messageFontColor,
+                                                            mode = 4,
+                                                        )
+                                                    )
+                                                } else null
                                             }
 
                                             BilibiliConst.CMD_DM_INTERACTION -> {
@@ -183,13 +212,43 @@ class LiveDanmakuDataFlow(
                                                                             )
                                                                         }
                                                                     }
-                                                                } else emptyList<DanmakuData>()
+                                                                } else emptyList()
                                                             }.flatMap { it }
                                                         } else null
                                                     }
 
                                                     else -> null
                                                 }
+                                            }
+
+                                            BilibiliConst.CMD_WARNING -> {
+                                                val msg =
+                                                    jsonElement.jsonObject["msg"]?.jsonPrimitive?.content
+                                                        ?: ""
+                                                listOf(
+                                                    DanmakuData(
+                                                        danmakuId = Random.nextLong(),
+                                                        position = -1,
+                                                        content = "[直播警告]$msg",
+                                                        textColor = 0xFF_00_00,
+                                                        mode = 4,
+                                                    )
+                                                )
+                                            }
+
+                                            BilibiliConst.CMD_CUT_OFF -> {
+                                                val msg =
+                                                    jsonElement.jsonObject["msg"]?.jsonPrimitive?.content
+                                                        ?: ""
+                                                listOf(
+                                                    DanmakuData(
+                                                        danmakuId = Random.nextLong(),
+                                                        position = -1,
+                                                        content = "[直播切断]$msg",
+                                                        textColor = 0xFF_00_00,
+                                                        mode = 4,
+                                                    )
+                                                )
                                             }
 
                                             else -> null
