@@ -213,7 +213,7 @@ class LiveDanmakuDataFlow(
                                                                         }
                                                                     }
                                                                 } else emptyList()
-                                                            }.flatMap { it }
+                                                            }.flatten()
                                                         } else null
                                                     }
 
