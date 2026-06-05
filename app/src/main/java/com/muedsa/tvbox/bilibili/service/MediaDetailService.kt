@@ -114,14 +114,15 @@ class MediaDetailService(
         if (info.pages.size > 1) {
             info.pages
                 .map {
+                    val flag = if (pageInfo.cid == it.cid) "\uD83D\uDCCC" else ""
                     MediaCard(
                         id = info.bvid,
                         detailUrl = BiliVideoDetailUrlAttrs(
                             bvid = info.bvid,
                             page = it.page,
                         ).toJsonString(),
-                        title = "${it.part} ${info.title}",
-                        subTitle = info.owner?.name ?: "",
+                        title = "${flag}${it.part}",
+                        subTitle = "${flag}${info.title}",
                         coverImageUrl = info.pic
                     )
                 }
@@ -140,14 +141,15 @@ class MediaDetailService(
             if (section.episodes.isNotEmpty()) {
                 section.episodes
                     .map {
+                        val flag = if (pageInfo.cid == it.cid) "\uD83D\uDCCC" else ""
                         MediaCard(
                             id = it.bvid,
                             detailUrl = BiliVideoDetailUrlAttrs(
                                 bvid = it.bvid,
                                 page = 1,
                             ).toJsonString(),
-                            title = it.title,
-                            subTitle = info.owner?.name ?: "",
+                            title = "${flag}${it.title}",
+                            subTitle = "${flag}${info.owner?.name ?: ""}",
                             coverImageUrl = it.arc.pic,
                         )
                     }
