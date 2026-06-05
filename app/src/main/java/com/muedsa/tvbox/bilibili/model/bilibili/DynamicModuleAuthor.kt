@@ -8,7 +8,7 @@ data class DynamicModuleAuthor(
     // avatar
     val face: String = "",
     @SerialName("face_nft") val faceNft: Boolean = false,
-    val following: Boolean = true,
+    // val following: Int = 0,
     @SerialName("jump_url") val jumpUrl: String = "",
     val label: String = "",
     val mid: Long = 0L,
