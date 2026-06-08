@@ -17,6 +17,7 @@ import com.muedsa.tvbox.bilibili.BILI_WBI_MIXIN_KEY
 import com.muedsa.tvbox.bilibili.BilibiliConst
 import com.muedsa.tvbox.bilibili.helper.BiliApiHelper
 import com.muedsa.tvbox.bilibili.helper.BiliCookieHelper
+import com.muedsa.tvbox.bilibili.helper.M3UHelper
 import com.muedsa.tvbox.bilibili.model.BiliUseSpaceDetailUrlAttrs
 import com.muedsa.tvbox.bilibili.model.BiliVideoDetailUrlAttrs
 import com.muedsa.tvbox.bilibili.model.CoinAddParams
@@ -25,6 +26,7 @@ import com.muedsa.tvbox.bilibili.model.PagedMediaCardRows
 import com.muedsa.tvbox.bilibili.model.UserRelationModifyParams
 import com.muedsa.tvbox.bilibili.model.VideoHeartbeatInfo
 import com.muedsa.tvbox.bilibili.model.bilibili.BiliResp
+import com.muedsa.tvbox.bilibili.model.bilibili.LivePageSsrData
 import com.muedsa.tvbox.bilibili.model.bilibili.LiveUserRoomInfo
 import com.muedsa.tvbox.bilibili.model.bilibili.PlayUrl
 import com.muedsa.tvbox.bilibili.model.bilibili.RoomInfo
@@ -37,6 +39,7 @@ import com.muedsa.tvbox.tool.feignChrome
 import com.muedsa.tvbox.tool.get
 import com.muedsa.tvbox.tool.md5
 import com.muedsa.tvbox.tool.parseHtml
+import com.muedsa.tvbox.tool.stringBody
 import com.muedsa.tvbox.tool.toRequestBuild
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
@@ -465,41 +468,85 @@ class MediaDetailService(
 
     private suspend fun createLiveRoomPlaySource(roomInfo: RoomInfo): List<MediaPlaySource> {
         return if (roomInfo.liveStatus == 1) {
-            val resp = liveApiService.getPlayUrl(
-                cid = roomInfo.roomId,
-                platform = "android",
-                quality = 4,
-            )
-            if (resp.code == 0L && resp.data?.durl != null) {
-                listOf(
-                    MediaPlaySource(
-                        id = "bilibili_live",
-                        name = "哔哩哔哩直播",
-                        episodeList = resp.data.durl.mapIndexed { index, durl ->
-                            MediaEpisode(
-                                id = "$MEDIA_ID_LIVE_ROOM_PREFIX${roomInfo.roomId}",
-                                name = "线路${index + 1}",
-                                flag3 = roomInfo.roomId,
-                                flag5 = durl.url,
-                            )
-                        }
-                    )
+            val list = getLiveUrlFromPage(roomInfo)
+            if (list.isNullOrEmpty()) {
+                val resp = liveApiService.getPlayUrl(
+                    cid = roomInfo.roomId,
+                    platform = "android",
+                    quality = 4,
                 )
-            } else {
-                listOf(
-                    MediaPlaySource(
-                        id = "bilibili_live",
-                        name = "哔哩哔哩直播",
-                        episodeList = listOf(
-                            MediaEpisode(
-                                id = "$MEDIA_ID_LIVE_ROOM_PREFIX${roomInfo.roomId}",
-                                name = resp.message.ifBlank { "获取直播地址失败" },
+                if (resp.code == 0L && resp.data?.durl != null) {
+                    listOf(
+                        MediaPlaySource(
+                            id = "bilibili_live",
+                            name = "哔哩哔哩直播",
+                            episodeList = resp.data.durl.mapIndexed { index, durl ->
+                                MediaEpisode(
+                                    id = "$MEDIA_ID_LIVE_ROOM_PREFIX${roomInfo.roomId}",
+                                    name = "线路${index + 1}",
+                                    flag3 = roomInfo.roomId,
+                                    flag5 = durl.url,
+                                )
+                            }
+                        )
+                    )
+                } else {
+                    listOf(
+                        MediaPlaySource(
+                            id = "bilibili_live",
+                            name = "哔哩哔哩直播",
+                            episodeList = listOf(
+                                MediaEpisode(
+                                    id = "$MEDIA_ID_LIVE_ROOM_PREFIX${roomInfo.roomId}",
+                                    name = resp.message.ifBlank { "获取直播地址失败" },
+                                )
                             )
                         )
                     )
-                )
-            }
+                }
+            } else list
         } else emptyList()
+    }
+
+    private suspend fun getLiveUrlFromPage(roomInfo: RoomInfo): List<MediaPlaySource>? {
+        val url =
+            "${BilibiliConst.LIVE_SITE_URL}/${roomInfo.roomId}/?broadcast_type=0&is_room_feed=1&spm_id_from=333.1387.to_liveroom.0.click&live_from=86002"
+        val html = url.toRequestBuild()
+            .feignChrome(referer = "${BilibiliConst.MAIN_SITE_URL}/")
+            .get(okHttpClient = okHttpClient)
+            .stringBody()
+        val ssrData = LIVE_URL_REGEX.find(html)?.groups[1]?.value ?: return null
+        val livePageSsrData = LenientJson.decodeFromString<LivePageSsrData>(ssrData)
+        val playUrl = livePageSsrData.roomInitRes?.data?.playUrlInfo?.playUrl ?: return null
+        if (playUrl.stream.isEmpty()
+            || playUrl.stream[0].format.isEmpty()
+            || playUrl.stream[0].format[0].codec.isEmpty()
+        ) {
+            return null
+        }
+        val mid = BiliCookieHelper.getCookeValue(
+            cookieSaver = cookieSaver,
+            cookieName = BiliCookieHelper.COOKIE_UID,
+            defaultValue = "0",
+        )!!.toLong()
+        val m3uUrl = "${BilibiliConst.LIVE_API_URL}/xlive/play-gateway/master/url" +
+                "?cid=${roomInfo.roomId}" +
+                "&mid=${mid}" +
+                "&pt=web" +
+                "&p2p_type=1" +
+                "&net=0" +
+                "&free_type=0" +
+                "&build=0" +
+                "&feature=0" +
+                "&qn=10000" +
+                "&drm_type=0,1,2,3" +
+                "&cam_id=0" +
+                "&stream_name=${livePageSsrData.roomInitRes.data.playUrlInfo.playUrl.stream[0].format[0].codec[0].session}"
+        val m3uText = m3uUrl.toRequestBuild()
+            .feignChrome(referer = url)
+            .get(okHttpClient = okHttpClient)
+            .stringBody()
+        return M3UHelper.getLiveMediaPlaySourceList(m3uText, roomInfo.roomId)
     }
 
     private suspend fun userSpaceDetail(attrs: BiliUseSpaceDetailUrlAttrs): MediaDetail {
@@ -855,5 +902,7 @@ class MediaDetailService(
         const val USER_SPACE_VIDEO_ROW_COUNT = 10
         val PLAY_URL_REGEX = "<script>window\\.__playinfo__=(\\{.*?\\})</script>".toRegex()
         val PLAY_URL_SSR_DATA_REGEX = "const playurlSSRData = (\\{.*?\\}\n)".toRegex()
+        val LIVE_URL_REGEX =
+            "<script>window\\.__NEPTUNE_IS_MY_WAIFU__=(\\{.*?\\})</script>".toRegex()
     }
 }
