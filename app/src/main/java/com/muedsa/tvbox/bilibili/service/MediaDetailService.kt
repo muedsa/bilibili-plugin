@@ -30,6 +30,7 @@ import com.muedsa.tvbox.bilibili.model.bilibili.LivePageSsrData
 import com.muedsa.tvbox.bilibili.model.bilibili.LiveUserRoomInfo
 import com.muedsa.tvbox.bilibili.model.bilibili.PlayUrl
 import com.muedsa.tvbox.bilibili.model.bilibili.RoomInfo
+import com.muedsa.tvbox.bilibili.model.bilibili.RoomPlayInfo
 import com.muedsa.tvbox.bilibili.model.bilibili.VideoDetail
 import com.muedsa.tvbox.bilibili.model.bilibili.VideoPage
 import com.muedsa.tvbox.tool.ChromeUserAgent
@@ -515,9 +516,15 @@ class MediaDetailService(
             .feignChrome(referer = "${BilibiliConst.MAIN_SITE_URL}/")
             .get(okHttpClient = okHttpClient)
             .stringBody()
-        val ssrData = LIVE_URL_REGEX.find(html)?.groups[1]?.value ?: return null
-        val livePageSsrData = LenientJson.decodeFromString<LivePageSsrData>(ssrData)
-        val playUrl = livePageSsrData.roomInitRes?.data?.playUrlInfo?.playUrl ?: return null
+        val ssrData = LIVE_URL_REGEX.find(html)?.groups[1]?.value
+        var roomPlayInfo: RoomPlayInfo?
+        if (!ssrData.isNullOrEmpty()) {
+            val livePageSsrData = LenientJson.decodeFromString<LivePageSsrData>(ssrData)
+            roomPlayInfo = livePageSsrData.roomInitRes?.data
+        } else {
+            roomPlayInfo = liveApiService.getRoomPlayInfo(roomInfo.roomId).data
+        }
+        val playUrl = roomPlayInfo?.playUrlInfo?.playUrl ?: return null
         if (playUrl.stream.isEmpty()
             || playUrl.stream[0].format.isEmpty()
             || playUrl.stream[0].format[0].codec.isEmpty()
@@ -541,7 +548,7 @@ class MediaDetailService(
                 "&qn=10000" +
                 "&drm_type=0,1,2,3" +
                 "&cam_id=0" +
-                "&stream_name=${livePageSsrData.roomInitRes.data.playUrlInfo.playUrl.stream[0].format[0].codec[0].session}"
+                "&stream_name=${roomPlayInfo.playUrlInfo.playUrl.stream[0].format[0].codec[0].session}"
         val m3uText = m3uUrl.toRequestBuild()
             .feignChrome(referer = url)
             .get(okHttpClient = okHttpClient)

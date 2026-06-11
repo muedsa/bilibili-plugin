@@ -7,6 +7,7 @@ import com.muedsa.tvbox.bilibili.model.bilibili.LivePlayUrl
 import com.muedsa.tvbox.bilibili.model.bilibili.LiveUserFollowing
 import com.muedsa.tvbox.bilibili.model.bilibili.LiveUserRoomInfo
 import com.muedsa.tvbox.bilibili.model.bilibili.RoomInfo
+import com.muedsa.tvbox.bilibili.model.bilibili.RoomPlayInfo
 import com.muedsa.tvbox.tool.ChromeUserAgent
 import retrofit2.http.GET
 import retrofit2.http.Header
@@ -57,4 +58,18 @@ interface BilibiliLiveApiService {
         @QueryMap params: Map<String, String>,
         @Header("User-Agent") userAgent: String = ChromeUserAgent,
     ): BiliResp<DanmakuInfo>
+
+    @GET("xlive/web-room/v2/index/getRoomPlayInfo")
+    suspend fun getRoomPlayInfo(
+        @Query("room_id") cid: Long,
+        @Query("protocol") protocol: String = "0,1",
+        @Query("format") format: String = "0,1,2",
+        @Query("codec") codec: String = "0,1",
+        @Query("qn") qn: Int = 0,
+        @Query("platform") platform: String = "web",
+        @Query("ptype") ptype: Int = 8,
+        @Query("dolby") dolby: Int = 5,
+        @Query("panoramic") panoramic: Int = 1,
+        @Header("User-Agent") userAgent: String = ChromeUserAgent,
+    ): BiliResp<RoomPlayInfo>
 }
