@@ -18,14 +18,14 @@ if (keystorePropertiesFile.exists() && keystorePropertiesFile.canRead()) {
 
 android {
     namespace = "com.muedsa.tvbox.bilibili"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "com.muedsa.tvbox.bilibili"
         minSdk = 24
-        targetSdk = 36
-        versionCode = 25
-        versionName = "0.4.1"
+        targetSdk = 37
+        versionCode = 26
+        versionName = "0.5.0"
     }
 
     signingConfigs {
