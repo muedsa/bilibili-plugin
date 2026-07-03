@@ -63,12 +63,12 @@ android {
 }
 
 androidComponents {
-    // 修改APK文件名
+    // 修改文件名
     onVariants { variant ->
         val buildTypeName = variant.buildType ?: "unknown"
         variant.outputs.forEach { output ->
             val versionName = output.versionName.orNull ?: "0.0.0"
-            output.outputFileName = "${rootProject.name}-${versionName}-${buildTypeName}.apk"
+            output.outputFileName = "${rootProject.name}-${versionName}-${buildTypeName}.apk.tbp"
         }
     }
 }
