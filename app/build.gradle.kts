@@ -7,7 +7,6 @@ import java.util.Properties
 
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.serialization)
 }
 
@@ -61,13 +60,15 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
+}
 
+androidComponents {
     // 修改APK文件名
-    applicationVariants.all {
-        outputs.all {
-            if (this is com.android.build.gradle.internal.api.ApkVariantOutputImpl) {
-                outputFileName = "${rootProject.name}-${versionName}-${buildType.name}.apk.tbp"
-            }
+    onVariants { variant ->
+        val buildTypeName = variant.buildType ?: "unknown"
+        variant.outputs.forEach { output ->
+            val versionName = output.versionName.orNull ?: "0.0.0"
+            output.outputFileName = "${rootProject.name}-${versionName}-${buildTypeName}.apk"
         }
     }
 }

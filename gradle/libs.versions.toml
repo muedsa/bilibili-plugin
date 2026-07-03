@@ -1,9 +1,9 @@
 [versions]
-agp = "8.13.2"
-kotlin = "2.3.10"
+agp = "9.2.1"
+kotlin = "2.4.0"
 tvboxApi = "12.1.0"
 junit4 = "4.13.2"
-kotlinxCoroutinesTest = "1.10.2"
+kotlinxCoroutinesTest = "1.11.0"
 smaliDexlib2 = "3.0.9"
 
 [libraries]
@@ -16,5 +16,4 @@ smali-dexlib2 = { module = "com.android.tools.smali:smali-dexlib2", version.ref 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 android-library = { id = "com.android.library", version.ref = "agp" }
-kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
